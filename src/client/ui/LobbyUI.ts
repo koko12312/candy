@@ -300,10 +300,18 @@ export class LobbyUI {
     const localPlayer = state.players.find((p) => p.playerId === this.localPlayerId);
     const isHost = localPlayer ? localPlayer.isHost : false;
 
-    // Start button enabled only if host and at least 1 player and all players are ready
-    const allReady = state.players.length >= 1 && state.players.every((p) => p.isReady || p.isHost);
-    this.btnStartGame.disabled = !isHost || !allReady;
+    // Host has Start Game button, Guest has Ready Up button
     this.btnStartGame.style.display = isHost ? 'block' : 'none';
+    this.btnToggleReady.style.display = isHost ? 'none' : 'block';
+
+    // Start button enabled only if host and at least 1 player and all players are ready
+    const allReady = state.players.length >= 1 && state.players.every((p) => p.isReady);
+    this.btnStartGame.disabled = !isHost || !allReady;
+
+    if (localPlayer) {
+      this.isReady = localPlayer.isReady;
+      this.updateReadyButtonUI();
+    }
 
     for (let slot = 0; slot < 4; slot++) {
       const p = state.players.find((pl) => pl.slot === slot);

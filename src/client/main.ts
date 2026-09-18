@@ -225,37 +225,43 @@ export class MatchPopApp {
     if (state.status === 'LOBBY') {
       this.lobbyUI.updateWaitingRoomState(state);
     } else if (state.status === 'IN_GAME') {
+      this.lobbyUI.hide();
       this.hud.updatePlayers(state.players);
     }
   }
 
   private handleGameStart(payload: GameStartPayload): void {
-    this.gameState = 'IN_GAME';
-    this.currentBoard = payload.board;
-    this.activePlayerId = payload.activePlayerId;
-    this.currentLevel = payload.level || 1;
-    this.currentTargetScore = payload.targetScore || 2000;
+    console.log('[Main] Received game:start', payload);
+    try {
+      this.gameState = 'IN_GAME';
+      this.currentBoard = payload.board;
+      this.activePlayerId = payload.activePlayerId;
+      this.currentLevel = payload.level || 1;
+      this.currentTargetScore = payload.targetScore || 2000;
 
-    const activePlayer = this.currentPlayers.find((p) => p.playerId === payload.activePlayerId);
-    this.activeSlot = activePlayer ? activePlayer.slot : 0;
+      const activePlayer = this.currentPlayers.find((p) => p.playerId === payload.activePlayerId);
+      this.activeSlot = activePlayer ? activePlayer.slot : 0;
 
-    this.lobbyUI.hide();
-    this.hud.show();
-    this.hud.setRoomCode(this.network.getRoomCode());
-    this.hud.updatePlayers(this.currentPlayers);
-    this.hud.updateLevel(this.currentLevel, 0, this.currentTargetScore);
-    this.hud.updateTurn(
-      payload.activePlayerId,
-      activePlayer ? activePlayer.name : 'Player',
-      payload.turnExpiresAt,
-      payload.turnDurationMs
-    );
+      this.lobbyUI.hide();
+      this.hud.show();
+      this.hud.setRoomCode(this.network.getRoomCode());
+      this.hud.updatePlayers(this.currentPlayers);
+      this.hud.updateLevel(this.currentLevel, 0, this.currentTargetScore);
+      this.hud.updateTurn(
+        payload.activePlayerId,
+        activePlayer ? activePlayer.name : 'Player',
+        payload.turnExpiresAt,
+        payload.turnDurationMs
+      );
 
-    this.renderer.resize();
-    this.renderer.setBoard(payload.board);
+      this.renderer.resize();
+      this.renderer.setBoard(payload.board);
 
-    this.music.start();
-    this.updateInputLockState();
+      this.music.start();
+      this.updateInputLockState();
+    } catch (err: any) {
+      console.error('[Main] Error in handleGameStart:', err);
+    }
   }
 
   private async handleMoveResult(payload: MoveResultPayload): Promise<void> {
