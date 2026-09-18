@@ -26,15 +26,14 @@ jobs:
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-      - name: Bundle Web Assets & Initialize Capacitor
+      - name: Install Project Dependencies
+        run: npm install
+
+      - name: Build Production Web Assets
+        run: npm run build
+
+      - name: Setup Capacitor Android Platform
         run: |
-          mkdir -p dist
-          # Bundle all project files and subfolders into dist (ignoring git metadata)
-          rsync -av --exclude='.git*' --exclude='.github' --exclude='dist' ./ dist/
-          
-          npm init -y
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init "Candy Game" "com.koko.candy" --web-dir "dist"
           npx cap add android
           npx cap sync android
 

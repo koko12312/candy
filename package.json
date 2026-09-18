@@ -13,6 +13,9 @@
     "test:e2e:bot": "npm run build && tsx tests/e2e/multiplayer_bot_simulation.ts"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^22.10.2",
