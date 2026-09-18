@@ -1,0 +1,33 @@
+{
+  "appId": "com.matchpop.multiplayer",
+  "appName": "Match Pop Multiplayer",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "backgroundColor": "#18042c",
+  "server": {
+    "cleartext": true,
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "launchAutoHide": true,
+      "backgroundColor": "#18042c",
+      "androidSplashResourceName": "splash",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#18042c",
+      "overlaysWebView": true
+    },
+    "Keyboard": {
+      "resize": "none"
+    }
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  }
+}
