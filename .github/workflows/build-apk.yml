@@ -40,6 +40,9 @@ jobs:
           npx cap add android || true
           npx cap sync android
 
+      - name: Generate App Icons and Splash Screens
+        run: npx @capacitor/assets generate --android || true
+
       - name: Compile Debug APK with Gradle
         run: |
           cd android
