@@ -13,22 +13,22 @@
     "test:e2e:bot": "npm run build && tsx tests/e2e/multiplayer_bot_simulation.ts"
   },
   "dependencies": {
-    "cors": "^2.8.6",
-    "express": "^4.22.3",
-    "socket.io": "^4.8.3",
-    "socket.io-client": "^4.8.3",
-    "uuid": "^14.0.2"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.63.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^22.10.2",
     "@types/socket.io": "^3.0.1",
     "@types/uuid": "^10.0.0",
+    "cors": "^2.8.6",
+    "express": "^4.22.3",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
-    "vite": "^6.0.3",
+    "uuid": "^14.0.2",
+    "vite": "^6.0.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "vitest": "^2.1.8"
   }
 }
