@@ -160,6 +160,10 @@ export class SocketServer {
           onReshuffle: (payload) => {
             this.io.to(`room:${found.room.roomCode}`).emit('game:reshuffle', payload);
           },
+          onLevelUp: (payload) => {
+            this.io.to(`room:${found.room.roomCode}`).emit('game:level_up', payload);
+            this.broadcastRoomState(found.room.roomCode);
+          },
           onGameOver: (payload) => {
             this.io.to(`room:${found.room.roomCode}`).emit('game:over', payload);
             this.broadcastRoomState(found.room.roomCode);

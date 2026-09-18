@@ -66,8 +66,21 @@ export class HUD {
     this.stopTimer();
   }
 
+  private levelBanner: HTMLElement;
+
   public setRoomCode(code: string): void {
     this.roomCodeBadge.textContent = code;
+  }
+
+  public updateLevel(level: number, currentTotalScore: number, targetScore: number): void {
+    if (!this.levelBanner) {
+      this.levelBanner = document.createElement('div');
+      this.levelBanner.className = 'level-status-banner';
+      this.levelBanner.style.cssText = 'background: rgba(0,0,0,0.5); color: white; padding: 4px 10px; border-radius: 12px; margin-top: 6px; font-weight: bold; font-size: 0.9rem; text-align: center; border: 2px solid var(--accent-yellow);';
+      // Insert right after the room code badge area
+      this.roomCodeBadge.parentElement?.appendChild(this.levelBanner);
+    }
+    this.levelBanner.innerHTML = `Level ${level} • Score: ${currentTotalScore.toLocaleString()} / ${targetScore.toLocaleString()}`;
   }
 
   private bindEvents(): void {
@@ -190,6 +203,16 @@ export class HUD {
     this.podiumEntries.innerHTML = '';
 
     const medals = ['🥇', '🥈', '🥉', '4️⃣'];
+    
+    // Add victory/defeat title
+    const titleItem = document.createElement('div');
+    titleItem.style.cssText = 'text-align: center; margin-bottom: 20px;';
+    if (payload.isVictory) {
+      titleItem.innerHTML = `<h2 style="color: var(--accent-yellow); text-shadow: 0 0 10px rgba(255,215,0,0.5); font-size: 2rem;">🏆 VICTORY! 🏆</h2><p>Target Score Reached!</p>`;
+    } else {
+      titleItem.innerHTML = `<h2 style="color: #ff1744; font-size: 2rem;">Game Over</h2><p>Out of Rounds!</p>`;
+    }
+    this.podiumEntries.appendChild(titleItem);
 
     payload.rankings.forEach((entry, idx) => {
       const item = document.createElement('div');

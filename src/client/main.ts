@@ -45,6 +45,9 @@ export class MatchPopApp {
   private isCascadeAnimating = false;
   private settledCount = 0;
   private cascadeSettledCallbacks: (() => void)[] = [];
+  
+  private currentLevel = 1;
+  private currentTargetScore = 2000;
 
   constructor() {
     // 1. Audio Engine & Music Sequencer
@@ -90,6 +93,7 @@ export class MatchPopApp {
       onTurnChange: (payload) => this.handleTurnChange(payload),
       onTurnTimeout: (payload) => this.handleTurnTimeout(payload),
       onReshuffle: (payload) => this.handleReshuffle(payload),
+      onLevelUp: (payload) => this.handleLevelUp(payload),
       onGameOver: (payload) => this.handleGameOver(payload),
       onGameSyncState: (payload) => this.handleGameSyncState(payload),
       onError: (err) => console.warn('[Network Error]', err.message)
@@ -229,6 +233,8 @@ export class MatchPopApp {
     this.gameState = 'IN_GAME';
     this.currentBoard = payload.board;
     this.activePlayerId = payload.activePlayerId;
+    this.currentLevel = payload.level || 1;
+    this.currentTargetScore = payload.targetScore || 2000;
 
     const activePlayer = this.currentPlayers.find((p) => p.playerId === payload.activePlayerId);
     this.activeSlot = activePlayer ? activePlayer.slot : 0;
@@ -237,6 +243,7 @@ export class MatchPopApp {
     this.hud.show();
     this.hud.setRoomCode(this.network.getRoomCode());
     this.hud.updatePlayers(this.currentPlayers);
+    this.hud.updateLevel(this.currentLevel, 0, this.currentTargetScore);
     this.hud.updateTurn(
       payload.activePlayerId,
       activePlayer ? activePlayer.name : 'Player',
@@ -263,6 +270,9 @@ export class MatchPopApp {
       const p = this.currentPlayers.find((pl) => pl.playerId === payload.playerId);
       if (p) p.score = payload.playerTotalScore;
       this.hud.updatePlayers(this.currentPlayers);
+      
+      const totalScore = this.currentPlayers.reduce((sum, p) => sum + p.score, 0);
+      this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore);
     }
 
     // Play visual animations
@@ -300,7 +310,21 @@ export class MatchPopApp {
     this.renderer.setBoard(payload.newBoard);
   }
 
-  private handleGameOver(payload: GameOverPayload): void {
+  private handleLevelUp(payload: import('../shared/types').LevelUpPayload): void {
+    this.currentLevel = payload.newLevel;
+    this.currentTargetScore = payload.newTargetScore;
+    this.currentBoard = payload.newBoard;
+    this.renderer.setBoard(payload.newBoard);
+    
+    // Play sound and visual effect (fanfare)
+    this.audio.playComboFanfare('delicious');
+    
+    // Update HUD
+    const totalScore = this.currentPlayers.reduce((s, p) => s + p.score, 0);
+    this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore);
+  }
+
+  private handleGameOver(payload: import('../shared/types').GameOverPayload): void {
     this.gameState = 'GAME_OVER';
     this.input.setLocked(true);
     this.music.stop();
@@ -313,6 +337,8 @@ export class MatchPopApp {
     this.currentPlayers = payload.players;
     this.currentBoard = payload.board;
     this.activePlayerId = payload.activePlayerId;
+    if (payload.level) this.currentLevel = payload.level;
+    if (payload.targetScore) this.currentTargetScore = payload.targetScore;
 
     const activePlayer = this.currentPlayers.find((p) => p.playerId === payload.activePlayerId);
     this.activeSlot = activePlayer ? activePlayer.slot : 0;
@@ -323,6 +349,8 @@ export class MatchPopApp {
       this.hud.show();
       this.hud.setRoomCode(payload.roomCode);
       this.hud.updatePlayers(payload.players);
+      const totalScore = this.currentPlayers.reduce((sum, p) => sum + p.score, 0);
+      this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore);
       this.hud.updateTurn(
         payload.activePlayerId,
         activePlayer ? activePlayer.name : 'Player',

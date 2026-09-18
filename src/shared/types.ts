@@ -121,6 +121,7 @@ export interface RoomSettings {
   turnDurationSeconds: number; // default: 20
   maxRounds: number;           // default: 10
   boardSize: number;           // default: 9 (9x9)
+  gameMode: 'coop' | 'competitive'; // default: 'coop'
 }
 
 export interface PlayerDTO {
@@ -152,6 +153,8 @@ export interface RoomStateDTO {
   settings: RoomSettings;
   activePlayerId?: string;
   currentRound?: number;
+  level?: number;
+  targetScore?: number;
 }
 
 export interface RoomCreateRequest {
@@ -185,6 +188,8 @@ export interface GameStartPayload {
   board: Tile[][];
   activePlayerId: string;
   round: number;
+  level: number;
+  targetScore: number;
   turnExpiresAt: number;
   turnDurationMs: number;
 }
@@ -229,8 +234,16 @@ export interface ReshufflePayload {
   events: EngineEvent[];
 }
 
+export interface LevelUpPayload {
+  newLevel: number;
+  newTargetScore: number;
+  newBoard: Tile[][];
+  events: EngineEvent[];
+}
+
 export interface GameOverPayload {
   winnerPlayerId: string;
+  isVictory: boolean;
   rankings: {
     playerId: string;
     name: string;
@@ -247,6 +260,8 @@ export interface GameSyncStatePayload {
   players: PlayerDTO[];
   activePlayerId: string;
   round: number;
+  level: number;
+  targetScore: number;
   turnExpiresAt: number;
   turnDurationMs: number;
   serverTimestamp: number;

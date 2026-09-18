@@ -22,6 +22,7 @@ export interface GameSessionCallbacks {
   onTurnChange: (payload: TurnChangePayload) => void;
   onTurnTimeout: (payload: TurnTimeoutPayload) => void;
   onReshuffle: (payload: ReshufflePayload) => void;
+  onLevelUp: (payload: LevelUpPayload) => void;
   onGameOver: (payload: GameOverPayload) => void;
 }
 
@@ -36,6 +37,8 @@ export class GameSession {
   public activeSlot = 0;
   public currentTurnIndex = 0; // Index into active connected players list
   public round = 1;
+  public level = 1;
+  public targetScore = 2000;
   public turnStartedAt = 0;
   public turnExpiresAt = 0;
   public turnDurationMs: number;
@@ -93,6 +96,8 @@ export class GameSession {
       board: Match3Engine.cloneBoard(this.board),
       activePlayerId: this.activePlayerId,
       round: this.round,
+      level: this.level,
+      targetScore: this.targetScore,
       turnExpiresAt: this.turnExpiresAt,
       turnDurationMs: this.turnDurationMs
     });
@@ -313,6 +318,33 @@ export class GameSession {
 
         if (this.room.status !== 'IN_GAME') return;
 
+        const totalScore = this.room.players.reduce((sum, p) => sum + p.score, 0);
+
+        if (totalScore >= this.targetScore) {
+          // Level Up!
+          this.level++;
+          this.targetScore = this.targetScore + (this.level * 2000);
+          this.round = 1;
+          
+          const reshuffled = this.engine.reshuffleBoard(this.board, this.prng);
+          this.board = reshuffled.newBoard;
+          
+          this.callbacks.onLevelUp({
+            newLevel: this.level,
+            newTargetScore: this.targetScore,
+            newBoard: Match3Engine.cloneBoard(this.board),
+            events: reshuffled.events
+          });
+          
+          // Re-start turn countdown without advancing player, or advance? Let's just advance.
+          this.advanceTurn();
+          const nextP = this.getCurrentPlayer();
+          if (nextP && this.room.status === 'IN_GAME') {
+            this.emitTurnChange(nextP);
+          }
+          return;
+        }
+
         const wrapped = this.advanceTurn();
         if (wrapped && this.round > this.room.settings.maxRounds) {
           this.triggerGameOver();
@@ -439,8 +471,12 @@ export class GameSession {
       winnerPlayerId = rankings[0].playerId;
     }
 
+    const totalScore = this.room.players.reduce((sum, p) => sum + p.score, 0);
+    const isVictory = totalScore >= this.targetScore;
+
     this.callbacks.onGameOver({
       winnerPlayerId,
+      isVictory,
       rankings
     });
   }
@@ -456,6 +492,8 @@ export class GameSession {
       players: this.room.toDTO().players,
       activePlayerId: this.activePlayerId,
       round: this.round,
+      level: this.level,
+      targetScore: this.targetScore,
       turnExpiresAt: this.turnExpiresAt,
       turnDurationMs: this.turnDurationMs,
       serverTimestamp: Date.now(),

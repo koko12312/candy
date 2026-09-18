@@ -25,6 +25,7 @@ export interface NetworkCallbacks {
   onTurnChange?: (payload: TurnChangePayload) => void;
   onTurnTimeout?: (payload: TurnTimeoutPayload) => void;
   onReshuffle?: (payload: ReshufflePayload) => void;
+  onLevelUp?: (payload: import('../../shared/types').LevelUpPayload) => void;
   onGameOver?: (payload: GameOverPayload) => void;
   onGameSyncState?: (payload: GameSyncStatePayload) => void;
   onPlayerDisconnected?: (data: { playerId: string; graceSecondsRemaining: number }) => void;
@@ -185,6 +186,10 @@ export class NetworkClient {
 
     this.socket.on('game:reshuffle', (payload: ReshufflePayload) => {
       this.callbacks.onReshuffle?.(payload);
+    });
+
+    this.socket.on('game:level_up', (payload: import('../../shared/types').LevelUpPayload) => {
+      this.callbacks.onLevelUp?.(payload);
     });
 
     this.socket.on('game:over', (payload: GameOverPayload) => {
