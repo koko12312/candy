@@ -649,13 +649,16 @@ export class CanvasRenderer {
     for (const visual of this.boardTiles.values()) {
       if (visual.alpha <= 0 || visual.scale <= 0) continue;
 
+      const isSelected = !!(this.selectedCoord && visual.row === this.selectedCoord.row && visual.col === this.selectedCoord.col);
+      const selectScale = isSelected ? 1.12 + 0.06 * Math.sin(Date.now() / 120) : 1.0;
+
       const sprite = this.textures.getCandySprite(visual.color, visual.type as any);
       if (sprite) {
         ctx.save();
         ctx.globalAlpha = visual.alpha;
 
-        const renderW = this.cellSize * visual.scale;
-        const renderH = this.cellSize * visual.scale;
+        const renderW = this.cellSize * visual.scale * selectScale;
+        const renderH = this.cellSize * visual.scale * selectScale;
         const cx = visual.x + this.cellSize / 2;
         const cy = visual.y + this.cellSize / 2;
 
@@ -667,6 +670,22 @@ export class CanvasRenderer {
         ctx.drawImage(sprite, -renderW / 2, -renderH / 2, renderW, renderH);
         ctx.restore();
       }
+    }
+
+    // 2.5 Draw Active Selection Halo on top of candy
+    if (this.selectedCoord) {
+      const sx = this.boardOffsetX + this.selectedCoord.col * this.cellSize;
+      const sy = this.boardOffsetY + this.selectedCoord.row * this.cellSize;
+      const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 150);
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(sx + 2, sy + 2, this.cellSize - 4, this.cellSize - 4, 12);
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = `rgba(255, 220, 0, ${0.75 + 0.25 * pulse})`;
+      ctx.shadowColor = '#ffd000';
+      ctx.shadowBlur = 10 * pulse + 4;
+      ctx.stroke();
+      ctx.restore();
     }
 
     // 3. Render Particles (shatters, sparkles, lasers, shockwaves)
