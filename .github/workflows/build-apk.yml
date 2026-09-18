@@ -40,6 +40,23 @@ jobs:
           npx cap add android || true
           npx cap sync android
 
+      - name: Update Android Version and VersionCode
+        run: |
+          node -e '
+            const fs = require("fs");
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const gradlePath = "android/app/build.gradle";
+            if (fs.existsSync(gradlePath)) {
+              let content = fs.readFileSync(gradlePath, "utf8");
+              const runNumber = parseInt(process.env.GITHUB_RUN_NUMBER || "1", 10);
+              // Ensure versionCode increments with each run and matches version string
+              content = content.replace(/versionCode \d+/g, "versionCode " + (1000 + runNumber));
+              content = content.replace(/versionName "[^"]+"/g, "versionName \"" + pkg.version + "\"");
+              fs.writeFileSync(gradlePath, content, "utf8");
+              console.log("[CI] Configured Android versionCode: " + (1000 + runNumber) + ", versionName: " + pkg.version);
+            }
+          '
+
       - name: Generate App Icons and Splash Screens
         run: npx @capacitor/assets generate --android || true
 

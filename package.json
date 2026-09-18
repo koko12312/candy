@@ -1,10 +1,12 @@
 {
   "name": "match-pop-multiplayer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "bump": "node scripts/bump-version.js",
+    "prebuild": "node scripts/bump-version.js",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "server": "npx tsx src/server/index.ts",
