@@ -211,11 +211,19 @@ export class MatchPopApp {
     }
   }
 
+  private moveTimeout: any = null;
+
   private handlePlayerSwap(from: Coordinate, to: Coordinate): void {
     if (this.gameState !== 'IN_GAME') return;
     if (this.network.getPlayerId() !== this.activePlayerId) return;
 
     this.input.setLocked(true);
+    if (this.moveTimeout) clearTimeout(this.moveTimeout);
+    this.moveTimeout = setTimeout(() => {
+      if (this.gameState === 'IN_GAME' && !this.isCascadeAnimating) {
+        this.updateInputLockState();
+      }
+    }, 4000);
     this.network.sendMove(from, to);
   }
 
@@ -265,6 +273,10 @@ export class MatchPopApp {
   }
 
   private async handleMoveResult(payload: MoveResultPayload): Promise<void> {
+    if (this.moveTimeout) {
+      clearTimeout(this.moveTimeout);
+      this.moveTimeout = null;
+    }
     this.isCascadeAnimating = true;
     this.input.setLocked(true);
 
@@ -285,9 +297,16 @@ export class MatchPopApp {
       this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore);
     }
 
-    // Play visual animations
-    await this.renderer.playEventsPipeline(payload.events, payload.boardAfterSettled);
-    this.currentBoard = payload.boardAfterSettled;
+    try {
+      // Play visual animations
+      await this.renderer.playEventsPipeline(payload.events, payload.boardAfterSettled);
+      this.currentBoard = payload.boardAfterSettled;
+    } catch (err) {
+      console.error('[Main] Error playing events pipeline:', err);
+    } finally {
+      this.isCascadeAnimating = false;
+      this.updateInputLockState();
+    }
   }
 
   private handleTurnChange(payload: TurnChangePayload): void {

@@ -23,7 +23,7 @@ export interface GameSessionCallbacks {
   onTurnChange: (payload: TurnChangePayload) => void;
   onTurnTimeout: (payload: TurnTimeoutPayload) => void;
   onReshuffle: (payload: ReshufflePayload) => void;
-  onLevelUp: (payload: LevelUpPayload) => void;
+  onLevelUp?: (payload: LevelUpPayload) => void;
   onGameOver: (payload: GameOverPayload) => void;
 }
 
@@ -330,7 +330,7 @@ export class GameSession {
           const reshuffled = this.engine.reshuffleBoard(this.board, this.prng);
           this.board = reshuffled.newBoard;
           
-          this.callbacks.onLevelUp({
+          this.callbacks.onLevelUp?.({
             newLevel: this.level,
             newTargetScore: this.targetScore,
             newBoard: Match3Engine.cloneBoard(this.board),

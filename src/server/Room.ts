@@ -66,7 +66,8 @@ export class Room {
     this.settings = {
       turnDurationSeconds: settings?.turnDurationSeconds ?? Math.round(DEFAULT_TURN_DURATION_MS / 1000),
       maxRounds: settings?.maxRounds ?? 10,
-      boardSize: settings?.boardSize ?? GRID_ROWS
+      boardSize: settings?.boardSize ?? GRID_ROWS,
+      gameMode: settings?.gameMode ?? 'coop'
     };
   }
 

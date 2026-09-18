@@ -42,66 +42,70 @@ export class InputHandler {
   private bindEvents(): void {
     if (!this.canvas || typeof this.canvas.addEventListener !== 'function') return;
 
-    // Pointer Events (Mouse, Pen, Modern Touch)
-    this.canvas.addEventListener('pointerdown', (e: PointerEvent) => {
-      this.onPointerDown(e.clientX, e.clientY, e.pointerId);
-      e.preventDefault();
-    });
-    this.canvas.addEventListener('pointermove', (e: PointerEvent) => {
-      this.onPointerMove(e.clientX, e.clientY, e.pointerId);
-      e.preventDefault();
-    });
-    this.canvas.addEventListener('pointerup', (e: PointerEvent) => {
-      this.onPointerUp(e.pointerId);
-    });
-    this.canvas.addEventListener('pointercancel', (e: PointerEvent) => {
-      this.onPointerUp(e.pointerId);
-    });
+    // Use PointerEvents if supported, otherwise TouchEvents
+    const hasPointer = typeof window !== 'undefined' && 'PointerEvent' in window;
 
-    // Native Touch Events fallback for Android WebViews (passive: false to prevent gesture interference)
-    this.canvas.addEventListener(
-      'touchstart',
-      (e: TouchEvent) => {
-        if (e.touches.length > 0) {
-          const t = e.touches[0];
-          this.onPointerDown(t.clientX, t.clientY, t.identifier);
-        }
+    if (hasPointer) {
+      this.canvas.addEventListener('pointerdown', (e: PointerEvent) => {
+        this.onPointerDown(e.clientX, e.clientY, e.pointerId);
         e.preventDefault();
-      },
-      { passive: false }
-    );
-
-    this.canvas.addEventListener(
-      'touchmove',
-      (e: TouchEvent) => {
-        if (e.touches.length > 0) {
-          const t = e.touches[0];
-          this.onPointerMove(t.clientX, t.clientY, t.identifier);
-        }
+      });
+      this.canvas.addEventListener('pointermove', (e: PointerEvent) => {
+        this.onPointerMove(e.clientX, e.clientY, e.pointerId);
         e.preventDefault();
-      },
-      { passive: false }
-    );
+      });
+      this.canvas.addEventListener('pointerup', (e: PointerEvent) => {
+        this.onPointerUp(e.pointerId);
+      });
+      this.canvas.addEventListener('pointercancel', (e: PointerEvent) => {
+        this.onPointerUp(e.pointerId);
+      });
+    } else {
+      // Fallback for older WebView without PointerEvent
+      this.canvas.addEventListener(
+        'touchstart',
+        (e: TouchEvent) => {
+          if (e.touches.length > 0) {
+            const t = e.touches[0];
+            this.onPointerDown(t.clientX, t.clientY, t.identifier);
+          }
+          e.preventDefault();
+        },
+        { passive: false }
+      );
 
-    this.canvas.addEventListener('touchend', (e: TouchEvent) => {
-      if (this.dragStart) {
-        this.onPointerUp(this.dragStart.id);
-      }
-    });
+      this.canvas.addEventListener(
+        'touchmove',
+        (e: TouchEvent) => {
+          if (e.touches.length > 0) {
+            const t = e.touches[0];
+            this.onPointerMove(t.clientX, t.clientY, t.identifier);
+          }
+          e.preventDefault();
+        },
+        { passive: false }
+      );
 
-    this.canvas.addEventListener('touchcancel', (e: TouchEvent) => {
-      if (this.dragStart) {
-        this.onPointerUp(this.dragStart.id);
-      }
-    });
+      this.canvas.addEventListener('touchend', (e: TouchEvent) => {
+        if (this.dragStart) {
+          this.onPointerUp(this.dragStart.id);
+        }
+      });
+
+      this.canvas.addEventListener('touchcancel', (e: TouchEvent) => {
+        if (this.dragStart) {
+          this.onPointerUp(this.dragStart.id);
+        }
+      });
+    }
   }
 
   private getRelativeCoordinates(clientX: number, clientY: number): { x: number; y: number } {
     const rect = this.canvas.getBoundingClientRect();
-    const styleW = parseFloat(this.canvas.style.width) || rect.width;
-    const styleH = parseFloat(this.canvas.style.height) || rect.height;
-    const scaleX = rect.width > 0 ? styleW / rect.width : 1;
-    const scaleY = rect.height > 0 ? styleH / rect.height : 1;
+    const width = this.canvas.clientWidth || rect.width || 1;
+    const height = this.canvas.clientHeight || rect.height || 1;
+    const scaleX = rect.width > 0 ? width / rect.width : 1;
+    const scaleY = rect.height > 0 ? height / rect.height : 1;
 
     return {
       x: (clientX - rect.left) * scaleX,

@@ -340,200 +340,203 @@ export class CanvasRenderer {
   public async playEventsPipeline(events: EngineEvent[], finalBoard: Tile[][]): Promise<void> {
     this.isProcessingCascade = true;
 
-    for (let i = 0; i < events.length; i++) {
-      const ev = events[i];
+    try {
+      for (let i = 0; i < events.length; i++) {
+        const ev = events[i];
 
-      switch (ev.type) {
-        case 'SWAP':
-          if (ev.valid) {
-            await this.animateSwap(ev.from, ev.to, false);
-          }
-          break;
+        switch (ev.type) {
+          case 'SWAP':
+            if (ev.valid) {
+              await this.animateSwap(ev.from, ev.to, false);
+            }
+            break;
 
-        case 'SWAP_REVERT':
-          await this.animateSwap(ev.from, ev.to, true);
-          break;
+          case 'SWAP_REVERT':
+            await this.animateSwap(ev.from, ev.to, true);
+            break;
 
-        case 'MATCH_FOUND': {
-          this.soundCallback?.('pop', ev.step);
-          for (const m of ev.tiles) {
-            const visual = this.boardTiles.get(m.id);
-            if (visual) {
-              const center = this.getCellCenterPixel(visual.row, visual.col);
-              this.particles.spawnCandyShatter(center.x, center.y, visual.color, 12);
-              visual.scale = 0;
-              visual.alpha = 0;
-              this.boardTiles.delete(visual.id);
-              if (this.gridMatrix[visual.row][visual.col] === visual) {
-                this.gridMatrix[visual.row][visual.col] = null;
+          case 'MATCH_FOUND': {
+            this.soundCallback?.('pop', ev.step);
+            for (const m of ev.tiles) {
+              const visual = this.boardTiles.get(m.id);
+              if (visual) {
+                const center = this.getCellCenterPixel(visual.row, visual.col);
+                this.particles.spawnCandyShatter(center.x, center.y, visual.color, 12);
+                visual.scale = 0;
+                visual.alpha = 0;
+                this.boardTiles.delete(visual.id);
+                if (this.gridMatrix[visual.row][visual.col] === visual) {
+                  this.gridMatrix[visual.row][visual.col] = null;
+                }
               }
             }
+
+            // If a special candy was formed at anchor
+            if (ev.spawnSpecial) {
+              const sp = ev.spawnSpecial;
+              const center = this.getCellCenterPixel(sp.row, sp.col);
+              this.particles.spawnSparkles(center.x, center.y, 14);
+              const newVis: TileVisual = {
+                id: sp.id,
+                row: sp.row,
+                col: sp.col,
+                color: sp.color,
+                type: sp.type,
+                x: center.x - this.cellSize / 2,
+                y: center.y - this.cellSize / 2,
+                targetX: center.x - this.cellSize / 2,
+                targetY: center.y - this.cellSize / 2,
+                scale: 1.4,
+                alpha: 1.0,
+                rotation: 0,
+                animTime: 0,
+                animDuration: 180,
+                easing: 'easeDrop'
+              };
+              this.boardTiles.set(sp.id, newVis);
+              this.gridMatrix[sp.row][sp.col] = newVis;
+            }
+
+            await this.delay(160);
+            break;
           }
 
-          // If a special candy was formed at anchor
-          if (ev.spawnSpecial) {
-            const sp = ev.spawnSpecial;
-            const center = this.getCellCenterPixel(sp.row, sp.col);
-            this.particles.spawnSparkles(center.x, center.y, 14);
-            const newVis: TileVisual = {
-              id: sp.id,
-              row: sp.row,
-              col: sp.col,
-              color: sp.color,
-              type: sp.type,
-              x: center.x - this.cellSize / 2,
-              y: center.y - this.cellSize / 2,
-              targetX: center.x - this.cellSize / 2,
-              targetY: center.y - this.cellSize / 2,
-              scale: 1.4,
-              alpha: 1.0,
-              rotation: 0,
-              animTime: 0,
-              animDuration: 180,
-              easing: 'easeDrop'
-            };
-            this.boardTiles.set(sp.id, newVis);
-            this.gridMatrix[sp.row][sp.col] = newVis;
-          }
+          case 'SPECIAL_DETONATE': {
+            const originCenter = this.getCellCenterPixel(ev.origin.row, ev.origin.col);
 
-          await this.delay(160);
-          break;
-        }
+            if (ev.specialType === 'striped_h') {
+              this.soundCallback?.('laser');
+              this.particles.spawnLaserSweep(
+                this.boardOffsetX,
+                originCenter.y,
+                this.boardOffsetX + this.boardPixelWidth,
+                originCenter.y,
+                '#00e5ff'
+              );
+            } else if (ev.specialType === 'striped_v') {
+              this.soundCallback?.('laser');
+              this.particles.spawnLaserSweep(
+                originCenter.x,
+                this.boardOffsetY,
+                originCenter.x,
+                this.boardOffsetY + this.boardPixelHeight,
+                '#00e5ff'
+              );
+            } else if (ev.specialType === 'wrapped') {
+              this.soundCallback?.('wrapped');
+              this.particles.spawnShockwave(originCenter.x, originCenter.y, 160, 'rgba(255, 64, 129, 0.9)');
+            } else if (ev.specialType === 'color_bomb' || ev.specialType === 'combo') {
+              this.soundCallback?.('bomb');
+              this.particles.spawnShockwave(originCenter.x, originCenter.y, 220, 'rgba(255, 215, 0, 0.95)');
+            }
 
-        case 'SPECIAL_DETONATE': {
-          const originCenter = this.getCellCenterPixel(ev.origin.row, ev.origin.col);
-
-          if (ev.specialType === 'striped_h') {
-            this.soundCallback?.('laser');
-            this.particles.spawnLaserSweep(
-              this.boardOffsetX,
-              originCenter.y,
-              this.boardOffsetX + this.boardPixelWidth,
-              originCenter.y,
-              '#00e5ff'
-            );
-          } else if (ev.specialType === 'striped_v') {
-            this.soundCallback?.('laser');
-            this.particles.spawnLaserSweep(
-              originCenter.x,
-              this.boardOffsetY,
-              originCenter.x,
-              this.boardOffsetY + this.boardPixelHeight,
-              '#00e5ff'
-            );
-          } else if (ev.specialType === 'wrapped') {
-            this.soundCallback?.('wrapped');
-            this.particles.spawnShockwave(originCenter.x, originCenter.y, 160, 'rgba(255, 64, 129, 0.9)');
-          } else if (ev.specialType === 'color_bomb' || ev.specialType === 'combo') {
-            this.soundCallback?.('bomb');
-            this.particles.spawnShockwave(originCenter.x, originCenter.y, 220, 'rgba(255, 215, 0, 0.95)');
-          }
-
-          for (const aff of ev.affectedTiles) {
-            const visual = this.boardTiles.get(aff.id);
-            if (visual) {
-              const center = this.getCellCenterPixel(visual.row, visual.col);
-              this.particles.spawnCandyShatter(center.x, center.y, visual.color, 8);
-              visual.scale = 0;
-              visual.alpha = 0;
-              this.boardTiles.delete(visual.id);
-              if (this.gridMatrix[visual.row][visual.col] === visual) {
-                this.gridMatrix[visual.row][visual.col] = null;
+            // Remove destroyed tiles
+            for (const t of ev.clearedTiles) {
+              const visual = this.boardTiles.get(t.id);
+              if (visual) {
+                const center = this.getCellCenterPixel(visual.row, visual.col);
+                this.particles.spawnCandyShatter(center.x, center.y, visual.color, 15);
+                visual.scale = 0;
+                visual.alpha = 0;
+                this.boardTiles.delete(visual.id);
+                if (this.gridMatrix[visual.row][visual.col] === visual) {
+                  this.gridMatrix[visual.row][visual.col] = null;
+                }
               }
             }
-          }
-          await this.delay(180);
-          break;
-        }
 
-        case 'GRAVITY_DROP': {
-          for (const drop of ev.drops) {
-            const visual = this.boardTiles.get(drop.id);
-            if (visual) {
-              visual.row = drop.toRow;
-              visual.targetY = this.boardOffsetY + drop.toRow * this.cellSize;
-              visual.animTime = 0;
-              visual.animDuration = 240;
-              visual.easing = 'easeDrop';
-              this.gridMatrix[drop.toRow][drop.col] = visual;
+            await this.delay(220);
+            break;
+          }
+
+          case 'TILES_FALL': {
+            const dur = 280;
+            const drops = ev.drops;
+
+            for (const drop of drops) {
+              let visual = this.boardTiles.get(drop.id);
+              if (!visual) {
+                // Spawn new falling candy from above the board
+                const startX = this.boardOffsetX + drop.toCol * this.cellSize;
+                const startY = this.boardOffsetY + (drop.fromRow - GRID_ROWS) * this.cellSize;
+
+                visual = {
+                  id: drop.id,
+                  row: drop.toRow,
+                  col: drop.toCol,
+                  color: drop.color,
+                  type: drop.type,
+                  x: startX,
+                  y: startY,
+                  targetX: this.boardOffsetX + drop.toCol * this.cellSize,
+                  targetY: this.boardOffsetY + drop.toRow * this.cellSize,
+                  scale: 1.0,
+                  alpha: 1.0,
+                  rotation: 0,
+                  animTime: 0,
+                  animDuration: dur,
+                  easing: 'easeDrop'
+                };
+                this.boardTiles.set(drop.id, visual);
+              } else {
+                // Existing tile dropping down
+                visual.row = drop.toRow;
+                visual.col = drop.toCol;
+                visual.targetX = this.boardOffsetX + drop.toCol * this.cellSize;
+                visual.targetY = this.boardOffsetY + drop.toRow * this.cellSize;
+                visual.animTime = 0;
+                visual.animDuration = dur;
+                visual.easing = 'easeDrop';
+              }
+              this.gridMatrix[drop.toRow][drop.toCol] = visual;
             }
+
+            await this.delay(dur + 40);
+            break;
           }
-          await this.delay(200);
-          break;
-        }
 
-        case 'REFILL_SPAWN': {
-          for (const sp of ev.spawns) {
-            const tx = this.boardOffsetX + sp.col * this.cellSize;
-            const ty = this.boardOffsetY + sp.row * this.cellSize;
-            // Spawn above top of board
-            const startY = this.boardOffsetY - (GRID_ROWS - sp.row) * this.cellSize;
-
-            const visual: TileVisual = {
-              id: sp.id,
-              row: sp.row,
-              col: sp.col,
-              color: sp.color,
-              type: sp.type,
-              x: tx,
-              y: startY,
-              targetX: tx,
-              targetY: ty,
-              scale: 1.0,
-              alpha: 1.0,
-              rotation: 0,
-              animTime: 0,
-              animDuration: 280,
-              easing: 'easeDrop'
-            };
-            this.boardTiles.set(sp.id, visual);
-            this.gridMatrix[sp.row][sp.col] = visual;
+          case 'COMBO_PRAISE': {
+            if (ev.step === 2) {
+              this.spawnPraiseText('SWEET!', '#ffd000');
+              this.soundCallback?.('sweet');
+            } else if (ev.step === 3) {
+              this.spawnPraiseText('TASTY!', '#ff4097');
+              this.soundCallback?.('tasty');
+            } else if (ev.step >= 4) {
+              this.spawnPraiseText('DELICIOUS!', '#00e5ff');
+              this.soundCallback?.('delicious');
+            }
+            break;
           }
-          await this.delay(220);
-          break;
-        }
 
-        case 'CASCADE_STEP_COMPLETE': {
-          if (ev.step === 2) {
-            this.spawnPraiseText('SWEET!', '#ffd000');
-            this.soundCallback?.('sweet');
-          } else if (ev.step === 3) {
-            this.spawnPraiseText('TASTY!', '#ff4097');
-            this.soundCallback?.('tasty');
-          } else if (ev.step >= 4) {
-            this.spawnPraiseText('DELICIOUS!', '#00e5ff');
-            this.soundCallback?.('delicious');
+          case 'BOARD_RESHUFFLE': {
+            this.spawnPraiseText('RESHUFFLE!', '#ffd000');
+            this.particles.spawnShockwave(
+              this.boardOffsetX + this.boardPixelWidth / 2,
+              this.boardOffsetY + this.boardPixelHeight / 2,
+              300,
+              '#ffd000'
+            );
+            this.setBoard(ev.newGrid);
+            await this.delay(400);
+            break;
           }
-          break;
-        }
 
-        case 'BOARD_RESHUFFLE': {
-          this.spawnPraiseText('RESHUFFLE!', '#ffd000');
-          this.particles.spawnShockwave(
-            this.boardOffsetX + this.boardPixelWidth / 2,
-            this.boardOffsetY + this.boardPixelHeight / 2,
-            300,
-            '#ffd000'
-          );
-          this.setBoard(ev.newGrid);
-          await this.delay(400);
-          break;
-        }
-
-        case 'TURN_SETTLE': {
-          this.setBoard(ev.board);
-          break;
+          case 'TURN_SETTLE': {
+            this.setBoard(ev.board);
+            break;
+          }
         }
       }
-    }
 
-    // Ensure final state synchronizes identically to server finalBoard
-    if (finalBoard && finalBoard.length > 0) {
-      this.setBoard(finalBoard);
+      // Ensure final state synchronizes identically to server finalBoard
+      if (finalBoard && finalBoard.length > 0) {
+        this.setBoard(finalBoard);
+      }
+    } finally {
+      this.isProcessingCascade = false;
+      this.onCascadeSettledCallback?.();
     }
-
-    this.isProcessingCascade = false;
-    this.onCascadeSettledCallback?.();
   }
 
   public spawnPraiseText(text: string, color = '#ffd000'): void {
