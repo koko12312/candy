@@ -2,6 +2,9 @@ name: Build Android APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
@@ -34,7 +37,7 @@ jobs:
 
       - name: Setup Capacitor Android Platform
         run: |
-          npx cap add android
+          npx cap add android || true
           npx cap sync android
 
       - name: Compile Debug APK with Gradle

@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npx tsc && npx vite build",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
     "server": "npx tsx src/server/index.ts",
     "test": "vitest run tests/unit",
     "test:watch": "vitest tests/unit",

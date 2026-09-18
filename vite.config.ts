@@ -1,14 +1,15 @@
 import { defineConfig } from 'vite';
-import { resolve } from 'path';
+import { fileURLToPath, URL } from 'url';
 
 export default defineConfig({
+  base: './',
   root: '.',
   publicDir: 'public',
   resolve: {
     alias: {
-      '@shared': resolve(__dirname, 'src/shared'),
-      '@server': resolve(__dirname, 'src/server'),
-      '@client': resolve(__dirname, 'src/client')
+      '@shared': fileURLToPath(new URL('./src/shared', import.meta.url)),
+      '@server': fileURLToPath(new URL('./src/server', import.meta.url)),
+      '@client': fileURLToPath(new URL('./src/client', import.meta.url))
     }
   },
   server: {
