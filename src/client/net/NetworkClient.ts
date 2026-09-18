@@ -66,7 +66,42 @@ export class NetworkClient {
       return this.socket;
     }
 
-    this.serverUrl = url || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+    const envUrl = (import.meta as any).env?.VITE_SERVER_URL;
+    let queryUrl: string | null = null;
+    let localStoredUrl: string | null = null;
+
+    if (typeof window !== 'undefined') {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        queryUrl = params.get('server');
+        localStoredUrl = localStorage.getItem('matchpop_server_url');
+      } catch (e) {
+        // Ignored
+      }
+    }
+
+    if (url) {
+      this.serverUrl = url;
+    } else if (queryUrl) {
+      this.serverUrl = queryUrl;
+      if (typeof localStorage !== 'undefined') localStorage.setItem('matchpop_server_url', queryUrl);
+    } else if (envUrl) {
+      this.serverUrl = envUrl;
+    } else if (localStoredUrl) {
+      this.serverUrl = localStoredUrl;
+    } else if (typeof window !== 'undefined') {
+      if (window.location.port === '3000') {
+        this.serverUrl = `${window.location.protocol}//${window.location.hostname}:3001`;
+      } else if (window.location.protocol.startsWith('http')) {
+        this.serverUrl = window.location.origin;
+      } else {
+        // Local APK / file protocol / capacitor
+        this.serverUrl = 'http://localhost:3001';
+      }
+    } else {
+      this.serverUrl = 'http://localhost:3001';
+    }
+
     this.socket = io(this.serverUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -101,6 +136,10 @@ export class NetworkClient {
 
   public getSlot(): number {
     return this.currentSlot;
+  }
+
+  public getServerUrl(): string {
+    return this.serverUrl || 'http://localhost:3001';
   }
 
   private registerEventHandlers(): void {

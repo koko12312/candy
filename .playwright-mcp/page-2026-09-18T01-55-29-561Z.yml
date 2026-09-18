@@ -1,0 +1,25 @@
+- generic [ref=f1e3]:
+  - generic [ref=f1e4]:
+    - heading "MATCH POP" [level=1] [ref=f1e5]
+    - paragraph [ref=f1e6]: Real-time 1-4 Player Multiplayer
+  - generic [ref=f1e7]:
+    - generic [ref=f1e8]:
+      - text: YOUR CANDY ALIAS
+      - textbox "SweetCrusher" [ref=f1e9]
+    - generic [ref=f1e10]:
+      - text: SELECT AVATAR
+      - generic [ref=f1e11]:
+        - generic [ref=f1e12] [cursor=pointer]: 🍬
+        - generic [ref=f1e13] [cursor=pointer]: 🍭
+        - generic [ref=f1e14] [cursor=pointer]: 🍫
+        - generic [ref=f1e15] [cursor=pointer]: 🍩
+        - generic [ref=f1e16] [cursor=pointer]: 🧁
+        - generic [ref=f1e17] [cursor=pointer]: 🍪
+    - generic [ref=f1e18]:
+      - button "Create Room" [ref=f1e19] [cursor=pointer]
+      - button "Join Room" [ref=f1e20] [cursor=pointer]
+    - generic [ref=f1e21]:
+      - generic [ref=f1e22]:
+        - generic [ref=f1e23]: PUBLIC LOBBIES
+        - button "↻ Refresh" [ref=f1e24] [cursor=pointer]
+      - generic [ref=f1e25]: No active public rooms found. Create one!

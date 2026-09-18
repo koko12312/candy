@@ -1,0 +1,3 @@
+[   74758ms] [WARNING] [Network Error] Cannot start game: waiting for players to be ready @ http://localhost:3000/src/client/main.ts?t=1789696583947:60
+[  224973ms] [WARNING] [Network Error] Cannot start game: waiting for players to be ready @ http://localhost:3000/src/client/main.ts?t=1789696583947:60
+[ 2300214ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/src/client/main.ts?t=1789699583577:0

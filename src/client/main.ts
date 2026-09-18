@@ -130,9 +130,10 @@ export class MatchPopApp {
       },
       onFetchPublicRooms: async () => {
         try {
-          const res = await fetch('/api/rooms');
-          if (res.ok) {
-            const data = await res.json();
+          const apiBase = this.network.getServerUrl();
+          const response = await fetch(`${apiBase}/api/rooms`);
+          if (response.ok) {
+            const data = await response.json();
             return data.rooms || [];
           }
         } catch (e) {

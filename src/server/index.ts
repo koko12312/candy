@@ -56,7 +56,7 @@ export function createServer(): AppServer {
   const start = (port?: number): Promise<number> => {
     const targetPort = port !== undefined
       ? port
-      : (process.env.PORT !== undefined ? Number(process.env.PORT) : 3000);
+      : (process.env.PORT !== undefined ? Number(process.env.PORT) : 3001);
     return new Promise((resolve) => {
       httpServer.listen(targetPort, () => {
         const addr = httpServer.address();
@@ -92,7 +92,8 @@ export function createServer(): AppServer {
 }
 
 // Auto-start if executed directly as main script
-if (process.argv[1] && (process.argv[1].endsWith('server/index.ts') || process.argv[1].endsWith('server/index.js'))) {
+const scriptPath = (process.argv[1] || '').replace(/\\/g, '/');
+if (scriptPath.endsWith('server/index.ts') || scriptPath.endsWith('server/index.js')) {
   const server = createServer();
   server.start();
 }
