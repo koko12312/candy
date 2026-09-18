@@ -11,11 +11,10 @@
     "declaration": true,
     "noEmit": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "baseUrl": ".",
     "paths": {
-      "@shared/*": ["src/shared/*"],
-      "@server/*": ["src/server/*"],
-      "@client/*": ["src/client/*"]
+      "@shared/*": ["./src/shared/*"],
+      "@server/*": ["./src/server/*"],
+      "@client/*": ["./src/client/*"]
     }
   },
   "include": ["src/**/*", "tests/**/*", "vite.config.ts"]
