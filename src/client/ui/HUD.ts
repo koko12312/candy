@@ -66,7 +66,7 @@ export class HUD {
     this.stopTimer();
   }
 
-  private levelBanner: HTMLElement;
+  private levelBanner!: HTMLDivElement;
 
   public setRoomCode(code: string): void {
     this.roomCodeBadge.textContent = code;
@@ -76,7 +76,7 @@ export class HUD {
     if (!this.levelBanner) {
       this.levelBanner = document.createElement('div');
       this.levelBanner.className = 'level-status-banner';
-      this.levelBanner.style.cssText = 'background: rgba(0,0,0,0.5); color: white; padding: 4px 10px; border-radius: 12px; margin-top: 6px; font-weight: bold; font-size: 0.9rem; text-align: center; border: 2px solid var(--accent-yellow);';
+      this.levelBanner.style.cssText = 'background: rgba(0,0,0,0.5); color: white; padding: 4px 10px; border-radius: 12px; margin-top: 6px; font-weight: bold; font-size: 0.9rem; text-align: center; border: 2px solid var(--accent-yellow); pointer-events: none;';
       // Insert right after the room code badge area
       this.roomCodeBadge.parentElement?.appendChild(this.levelBanner);
     }

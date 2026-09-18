@@ -262,6 +262,10 @@ export class MatchPopApp {
     this.isCascadeAnimating = true;
     this.input.setLocked(true);
 
+    if (!payload.valid && payload.reason === 'INVALID_SWAP') {
+      this.audio.playInvalidSwap();
+    }
+
     if (payload.boardAfterSettled && payload.boardAfterSettled.length > 0) {
       this.currentBoard = payload.boardAfterSettled;
     }

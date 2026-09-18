@@ -396,6 +396,7 @@ describe('Match Pop Multiplayer - Authoritative Server & Room Sync (Milestone M2
           onTurnChange: () => {},
           onTurnTimeout: () => {},
           onReshuffle: () => {},
+          onLevelUp: () => {},
           onGameOver: () => {}
         },
         123
