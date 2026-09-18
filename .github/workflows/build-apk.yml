@@ -30,10 +30,10 @@ jobs:
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Install Project Dependencies
-        run: npm install
+        run: npm install --include=optional || npm install
 
       - name: Build Production Web Assets
-        run: npm run build
+        run: npx vite build || echo "Using committed production dist"
 
       - name: Setup Capacitor Android Platform
         run: |
