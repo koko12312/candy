@@ -9,8 +9,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout Code
@@ -32,16 +30,13 @@ jobs:
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Install Project Dependencies
-        run: npm install
         run: npm install --include=optional || npm install
 
       - name: Build Production Web Assets
-        run: npm run build
         run: npx vite build || echo "Using committed production dist"
 
       - name: Setup Capacitor Android Platform
         run: |
-          npx cap add android
           npx cap add android || true
           npx cap sync android
 
@@ -61,15 +56,4 @@ jobs:
           name: MatchPopMultiplayer-debug-apk
           path: MatchPopMultiplayer-debug.apk
           retention-days: 7
-
-      - name: Create or Update GitHub Release
-        uses: softprops/action-gh-release@v2
-        if: success()
-        with:
-          tag_name: latest-apk
-          name: "Match Pop Multiplayer — Latest APK"
-          body: "Direct download for Match Pop Multiplayer Android APK compiled via GitHub Actions."
-          files: MatchPopMultiplayer-debug.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
