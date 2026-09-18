@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "server": "tsx src/server/index.ts",
+    "build": "npx tsc && npx vite build",
+    "server": "npx tsx src/server/index.ts",
     "test": "vitest run tests/unit",
     "test:watch": "vitest tests/unit",
     "test:e2e": "npm run build && playwright test",
