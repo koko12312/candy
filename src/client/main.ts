@@ -328,6 +328,7 @@ export class MatchPopApp {
     
     // Play sound and visual effect (fanfare)
     this.audio.playComboFanfare('delicious');
+    this.hud.showLevelUpOverlay(this.currentLevel);
     
     // Update HUD
     const totalScore = this.currentPlayers.reduce((s, p) => s + p.score, 0);

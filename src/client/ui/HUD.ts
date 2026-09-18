@@ -72,6 +72,50 @@ export class HUD {
     this.roomCodeBadge.textContent = code;
   }
 
+  public showLevelUpOverlay(level: number): void {
+    const overlay = document.createElement('div');
+    overlay.className = 'level-up-overlay';
+    overlay.style.cssText = `
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.5);
+      background: linear-gradient(135deg, #ff007b, #ff7b00);
+      color: white;
+      padding: 20px 40px;
+      border-radius: 20px;
+      font-size: 3rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(255,255,255,0.5);
+      text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+      z-index: 1000;
+      opacity: 0;
+      transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+      white-space: nowrap;
+    `;
+    overlay.innerHTML = `Level ${level}!`;
+    this.container.appendChild(overlay);
+
+    // Animate in
+    setTimeout(() => {
+      overlay.style.opacity = '1';
+      overlay.style.transform = 'translate(-50%, -50%) scale(1)';
+    }, 50);
+
+    // Animate out and remove
+    setTimeout(() => {
+      overlay.style.opacity = '0';
+      overlay.style.transform = 'translate(-50%, -50%) scale(1.5)';
+      setTimeout(() => {
+        if (overlay.parentNode) {
+          overlay.parentNode.removeChild(overlay);
+        }
+      }, 500);
+    }, 2500);
+  }
+
   public updateLevel(level: number, currentTotalScore: number, targetScore: number): void {
     if (!this.levelBanner) {
       this.levelBanner = document.createElement('div');
