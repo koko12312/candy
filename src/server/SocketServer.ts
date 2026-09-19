@@ -281,6 +281,22 @@ export class SocketServer {
         this.roomManager.cleanupEmptyRooms();
       });
 
+      // 7.5 Return to Room Lobby (rematch)
+      socket.on('room:return_to_lobby', () => {
+        const found = this.roomManager.findRoomBySocketId(socket.id);
+        if (!found) return;
+
+        if (found.room.status === 'GAME_OVER') {
+          found.room.resetToLobby();
+          const session = this.gameSessions.get(found.room.roomCode);
+          if (session) {
+            session.destroy();
+            this.gameSessions.delete(found.room.roomCode);
+          }
+          this.broadcastRoomState(found.room.roomCode);
+        }
+      });
+
       // 8. Disconnect
       socket.on('disconnect', () => {
         const found = this.roomManager.findRoomBySocketId(socket.id);

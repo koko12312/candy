@@ -34,3 +34,4 @@ if (fs.existsSync(indexPath)) {
     console.log(`[Version Bump] Updated index.html version indicator to v${pkg.version}`);
   }
 }
+

@@ -368,6 +368,12 @@ export class NetworkClient {
     this.clearSession();
   }
 
+  public returnToRoomLobby(): void {
+    if (this.socket) {
+      this.socket.emit('room:return_to_lobby');
+    }
+  }
+
   public disconnect(): void {
     if (this.socket) {
       this.socket.disconnect();

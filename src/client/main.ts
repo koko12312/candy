@@ -151,12 +151,7 @@ export class MatchPopApp {
       onToggleSound: () => this.audio.toggleMute(),
       onToggleMusic: () => this.music.toggleMute(),
       onBackToLobby: () => {
-        this.gameState = 'LOBBY';
-        this.music.stop();
-        this.hud.hide();
-        this.lobbyUI.show();
-        this.lobbyUI.setWaitingMode(false);
-        this.lobbyUI.refreshPublicRooms();
+        this.network.returnToRoomLobby();
       },
       onTimerTick: (sec) => this.audio.playTimerTick(sec)
     });
@@ -229,8 +224,19 @@ export class MatchPopApp {
 
   private handleRoomState(state: RoomStateDTO): void {
     this.currentPlayers = state.players;
+    const pid = this.network.getPlayerId();
+    if (pid) {
+      this.lobbyUI.setLocalPlayerId(pid);
+      this.hud.setLocalPlayerId(pid);
+    }
 
     if (state.status === 'LOBBY') {
+      if (this.gameState !== 'LOBBY') {
+        this.gameState = 'LOBBY';
+        this.hud.hide();
+        this.lobbyUI.show();
+        this.lobbyUI.setWaitingMode(true, this.network.getRoomCode());
+      }
       this.lobbyUI.updateWaitingRoomState(state);
     } else if (state.status === 'IN_GAME') {
       this.lobbyUI.hide();
@@ -242,6 +248,7 @@ export class MatchPopApp {
     console.log('[Main] Received game:start', payload);
     try {
       this.gameState = 'IN_GAME';
+      this.isCascadeAnimating = false; // Fix touch lock on second game
       this.currentBoard = payload.board;
       this.activePlayerId = payload.activePlayerId;
       this.currentLevel = payload.level || 1;
