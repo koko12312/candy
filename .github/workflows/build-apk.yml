@@ -60,6 +60,12 @@ jobs:
       - name: Generate App Icons and Splash Screens
         run: npx @capacitor/assets generate --android || true
 
+      - name: Cache Android Keystore
+        uses: actions/cache@v4
+        with:
+          path: ~/.android
+          key: android-keystore-v1
+
       - name: Compile Debug APK with Gradle
         run: |
           cd android
