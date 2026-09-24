@@ -5,6 +5,7 @@ export interface HUDCallbacks {
   onToggleSound: () => boolean;
   onToggleMusic: () => boolean;
   onBackToLobby: () => void;
+  onQuitMatch: () => void;
   onTimerTick?: (secondsRemaining: number) => void;
 }
 
@@ -16,6 +17,7 @@ export class HUD {
   private roomCodeBadge: HTMLElement;
   private btnSoundToggle: HTMLButtonElement;
   private btnMusicToggle: HTMLButtonElement;
+  private btnExitGame: HTMLButtonElement;
   private timerRingProgress: SVGCircleElement;
   private timerNumberDisplay: HTMLElement;
   private turnBanner: HTMLElement;
@@ -40,6 +42,7 @@ export class HUD {
     this.roomCodeBadge = this.container.querySelector('#hud-room-code') as HTMLElement;
     this.btnSoundToggle = this.container.querySelector('#btn-sound-toggle') as HTMLButtonElement;
     this.btnMusicToggle = this.container.querySelector('#btn-music-toggle') as HTMLButtonElement;
+    this.btnExitGame = this.container.querySelector('#btn-exit-game') as HTMLButtonElement;
     this.timerRingProgress = this.container.querySelector('#timer-ring-progress') as SVGCircleElement;
     this.timerNumberDisplay = this.container.querySelector('#timer-number-display') as HTMLElement;
     this.turnBanner = this.container.querySelector('#turn-banner') as HTMLElement;
@@ -136,6 +139,12 @@ export class HUD {
     this.btnMusicToggle.addEventListener('click', () => {
       const isMuted = this.callbacks.onToggleMusic();
       this.btnMusicToggle.textContent = isMuted ? '🎵❌' : '🎵';
+    });
+
+    this.btnExitGame.addEventListener('click', () => {
+      if (confirm('Are you sure you want to quit the match? You will leave the room entirely.')) {
+        this.callbacks.onQuitMatch();
+      }
     });
 
     this.btnPodiumLobby.addEventListener('click', () => {

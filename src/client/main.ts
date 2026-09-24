@@ -153,6 +153,12 @@ export class MatchPopApp {
       onBackToLobby: () => {
         this.network.returnToRoomLobby();
       },
+      onQuitMatch: () => {
+        this.network.leaveRoom();
+        this.hud.hide();
+        this.lobbyUI.show();
+        this.lobbyUI.setWaitingMode(false);
+      },
       onTimerTick: (sec) => this.audio.playTimerTick(sec)
     });
 
