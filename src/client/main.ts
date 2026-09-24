@@ -169,6 +169,7 @@ export class MatchPopApp {
     const session = this.network.loadPersistedSession();
     if (session && session.roomCode && session.sessionToken) {
       this.network.reconnect(session.roomCode, session.sessionToken).catch(() => {
+        this.network.clearSession();
         if (this.network.getRoomCode() === session.roomCode) {
           this.network.clearSession();
         }
