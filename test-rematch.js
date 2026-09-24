@@ -50,3 +50,4 @@ const { chromium } = require('playwright');
   console.log('Test complete. Browser closing.');
   await browser.close();
 })();
+
