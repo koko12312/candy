@@ -60,11 +60,21 @@ jobs:
       - name: Generate App Icons and Splash Screens
         run: npx @capacitor/assets generate --android || true
 
-      - name: Cache Android Keystore
-        uses: actions/cache@v4
-        with:
-          path: ~/.android
-          key: android-keystore-v1
+      - name: Ensure Permanent Keystore Exists
+        run: |
+          KEYSTORE_PATH="android/app/matchpop-debug.keystore"
+          if [ ! -f "$KEYSTORE_PATH" ]; then
+            echo "[CI] Generating permanent keystore at $KEYSTORE_PATH"
+            keytool -genkeypair -v \
+              -keystore "$KEYSTORE_PATH" \
+              -alias matchpop \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass matchpop123 \
+              -keypass matchpop123 \
+              -dname "CN=MatchPop, OU=Gaming, O=MatchPop, L=City, S=State, C=US"
+          fi
 
       - name: Compile Debug APK with Gradle
         run: |

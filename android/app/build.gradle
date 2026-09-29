@@ -16,8 +16,26 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    buildTypes {
+    signingConfigs {
+        debug {
+            storeFile file('matchpop-debug.keystore')
+            storePassword 'matchpop123'
+            keyAlias 'matchpop'
+            keyPassword 'matchpop123'
+        }
         release {
+            storeFile file('matchpop-debug.keystore')
+            storePassword 'matchpop123'
+            keyAlias 'matchpop'
+            keyPassword 'matchpop123'
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

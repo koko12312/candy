@@ -6,31 +6,18 @@ export interface DragStartInfo {
   startX: number;
   startY: number;
   cell: Coordinate;
-  startTime: number;
 }
 
 export type SwapCallback = (from: Coordinate, to: Coordinate) => void;
 
-/**
- * Commercial-Grade Universal Touch & Mouse Input Handler for Match Pop.
- * Features:
- * 1. Dual Gesture Engine: Fluid swipe drag-to-swap + intuitive two-tap swap.
- * 2. Hardware Pointer Capture: Zero dropped moves when dragging fast across edges.
- * 3. DPI & Viewport Safe: Dynamically computes bounding client rect on every touch.
- * 4. Self-Healing Failsafe: Automatically clears orphaned touch locks after 4 seconds.
- * 5. Touch Prevention: Stops default browser pinch/scroll behaviors cleanly.
- */
 export class InputHandler {
   private canvas: HTMLCanvasElement;
   private renderer: CanvasRenderer;
   private onSwap: SwapCallback;
 
   private isLocked = false;
-  private lastLockTime = 0;
   private dragStart: DragStartInfo | null = null;
-  
-  // Sensitive 12px threshold for instantaneous responsive feel on mobile screens
-  private readonly swipeThreshold = 12;
+  private swipeThreshold = 14; // Lowered from 24px for responsive mobile touch
 
   constructor(canvas: HTMLCanvasElement, renderer: CanvasRenderer, onSwap: SwapCallback) {
     this.canvas = canvas;
@@ -43,103 +30,91 @@ export class InputHandler {
   public setLocked(locked: boolean): void {
     this.isLocked = locked;
     if (locked) {
-      this.lastLockTime = Date.now();
       this.dragStart = null;
       this.renderer.setSelectedCoordinate(null);
     }
   }
 
   public getLocked(): boolean {
-    // Self-healing watchdog: If locked for > 4.5 seconds with no reset, auto-unlock
-    if (this.isLocked && Date.now() - this.lastLockTime > 4500) {
-      console.warn('[InputHandler] Failsafe: Auto-unlocking stuck input lock');
-      this.isLocked = false;
-      this.dragStart = null;
-    }
     return this.isLocked;
   }
 
-  public forceUnlock(): void {
-    this.isLocked = false;
-    this.dragStart = null;
-    this.renderer.setSelectedCoordinate(null);
-  }
-
   private bindEvents(): void {
-    if (!this.canvas) return;
+    if (!this.canvas || typeof this.canvas.addEventListener !== 'function') return;
 
-    // 1. Primary: Pointer Events with pointer capture (modern Android WebView, Chrome, iOS Safari)
-    if (typeof window !== 'undefined' && 'PointerEvent' in window) {
+    // Use PointerEvents if supported, otherwise TouchEvents
+    const hasPointer = typeof window !== 'undefined' && 'PointerEvent' in window;
+
+    if (hasPointer) {
       this.canvas.addEventListener('pointerdown', (e: PointerEvent) => {
-        try {
-          if (this.canvas.setPointerCapture) {
-            this.canvas.setPointerCapture(e.pointerId);
-          }
-        } catch (_) {}
-        this.handleTouchStart(e.clientX, e.clientY, e.pointerId);
-      }, { passive: false });
-
+        this.onPointerDown(e.clientX, e.clientY, e.pointerId);
+        e.preventDefault();
+      });
       this.canvas.addEventListener('pointermove', (e: PointerEvent) => {
-        this.handleTouchMove(e.clientX, e.clientY, e.pointerId);
-      }, { passive: false });
-
-      const onPointerEnd = (e: PointerEvent) => {
-        try {
-          if (this.canvas.releasePointerCapture && this.canvas.hasPointerCapture?.(e.pointerId)) {
-            this.canvas.releasePointerCapture(e.pointerId);
+        this.onPointerMove(e.clientX, e.clientY, e.pointerId);
+        e.preventDefault();
+      });
+      this.canvas.addEventListener('pointerup', (e: PointerEvent) => {
+        this.onPointerUp(e.pointerId);
+      });
+      this.canvas.addEventListener('pointercancel', (e: PointerEvent) => {
+        this.onPointerUp(e.pointerId);
+      });
+    } else {
+      // Fallback for older WebView without PointerEvent
+      this.canvas.addEventListener(
+        'touchstart',
+        (e: TouchEvent) => {
+          if (e.touches.length > 0) {
+            const t = e.touches[0];
+            this.onPointerDown(t.clientX, t.clientY, t.identifier);
           }
-        } catch (_) {}
-        this.handleTouchEnd(e.clientX, e.clientY, e.pointerId);
-      };
+          e.preventDefault();
+        },
+        { passive: false }
+      );
 
-      this.canvas.addEventListener('pointerup', onPointerEnd, { passive: false });
-      this.canvas.addEventListener('pointercancel', onPointerEnd, { passive: false });
+      this.canvas.addEventListener(
+        'touchmove',
+        (e: TouchEvent) => {
+          if (e.touches.length > 0) {
+            const t = e.touches[0];
+            this.onPointerMove(t.clientX, t.clientY, t.identifier);
+          }
+          e.preventDefault();
+        },
+        { passive: false }
+      );
+
+      this.canvas.addEventListener('touchend', (e: TouchEvent) => {
+        if (this.dragStart) {
+          this.onPointerUp(this.dragStart.id);
+        }
+      });
+
+      this.canvas.addEventListener('touchcancel', (e: TouchEvent) => {
+        if (this.dragStart) {
+          this.onPointerUp(this.dragStart.id);
+        }
+      });
     }
-
-    // 2. Fallback: Pure Touch Events for older WebViews / embedded wrappers
-    this.canvas.addEventListener('touchstart', (e: TouchEvent) => {
-      if (e.touches.length > 0) {
-        const t = e.touches[0];
-        this.handleTouchStart(t.clientX, t.clientY, t.identifier);
-      }
-      e.preventDefault();
-    }, { passive: false });
-
-    this.canvas.addEventListener('touchmove', (e: TouchEvent) => {
-      if (e.touches.length > 0) {
-        const t = e.touches[0];
-        this.handleTouchMove(t.clientX, t.clientY, t.identifier);
-      }
-      e.preventDefault();
-    }, { passive: false });
-
-    const onTouchEnd = (e: TouchEvent) => {
-      const id = this.dragStart ? this.dragStart.id : 0;
-      const t = e.changedTouches[0];
-      if (t) {
-        this.handleTouchEnd(t.clientX, t.clientY, id);
-      } else {
-        this.handleTouchEnd(0, 0, id);
-      }
-    };
-
-    this.canvas.addEventListener('touchend', onTouchEnd, { passive: false });
-    this.canvas.addEventListener('touchcancel', onTouchEnd, { passive: false });
   }
 
-  /**
-   * Converts window clientX/clientY into exact canvas CSS coordinates.
-   */
   private getRelativeCoordinates(clientX: number, clientY: number): { x: number; y: number } {
     const rect = this.canvas.getBoundingClientRect();
+    const width = this.canvas.clientWidth || rect.width || 1;
+    const height = this.canvas.clientHeight || rect.height || 1;
+    const scaleX = rect.width > 0 ? width / rect.width : 1;
+    const scaleY = rect.height > 0 ? height / rect.height : 1;
+
     return {
-      x: clientX - rect.left,
-      y: clientY - rect.top
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
     };
   }
 
-  private handleTouchStart(clientX: number, clientY: number, pointerId: number | string): void {
-    if (this.getLocked()) return;
+  private onPointerDown(clientX: number, clientY: number, id: number | string): void {
+    if (this.isLocked) return;
 
     const pos = this.getRelativeCoordinates(clientX, clientY);
     const cell = this.renderer.getCellCoordinatesFromPixel(pos.x, pos.y);
@@ -149,39 +124,40 @@ export class InputHandler {
       return;
     }
 
-    // Two-Tap Mode: If user already tapped an adjacent cell previously, swap instantly!
+    // Check tap-to-swap: Was an adjacent cell already selected?
     const prevSelected = this.renderer.getSelectedCoordinate();
     if (prevSelected) {
-      if (this.areAdjacent(prevSelected, cell)) {
+      const isAdj = this.areAdjacent(prevSelected, cell);
+      if (isAdj) {
+        // Tap on adjacent cell: trigger swap immediately!
         this.renderer.setSelectedCoordinate(null);
         this.dragStart = null;
-        this.executeSwap(prevSelected, cell);
+        this.onSwap(prevSelected, cell);
         return;
       }
     }
 
-    // Select the new tile with tactile glow
+    // Set new selection highlight
     this.renderer.setSelectedCoordinate(cell);
     this.dragStart = {
-      id: pointerId,
+      id,
       startX: pos.x,
       startY: pos.y,
-      cell,
-      startTime: Date.now()
+      cell
     };
   }
 
-  private handleTouchMove(clientX: number, clientY: number, pointerId: number | string): void {
-    if (this.getLocked() || !this.dragStart) return;
-    if (pointerId !== this.dragStart.id) return;
+  private onPointerMove(clientX: number, clientY: number, id: number | string): void {
+    if (this.isLocked || !this.dragStart) return;
+    if (id !== this.dragStart.id) return;
 
     const pos = this.getRelativeCoordinates(clientX, clientY);
     const dx = pos.x - this.dragStart.startX;
     const dy = pos.y - this.dragStart.startY;
     const distSq = dx * dx + dy * dy;
 
-    // Once gesture passes threshold, determine cardinal direction & trigger move immediately
     if (distSq >= this.swipeThreshold * this.swipeThreshold) {
+      // Determine dominant direction
       let targetRow = this.dragStart.cell.row;
       let targetCol = this.dragStart.cell.col;
 
@@ -193,42 +169,23 @@ export class InputHandler {
         targetRow += dy > 0 ? 1 : -1;
       }
 
-      // Ensure target is on 9x9 board
+      // Check bounds (9x9)
       if (targetRow >= 0 && targetRow < 9 && targetCol >= 0 && targetCol < 9) {
         const from = { ...this.dragStart.cell };
         const to = { row: targetRow, col: targetCol };
 
-        // Clean up gesture state before swap
+        // Clear selection & start state to prevent double fires
         this.dragStart = null;
         this.renderer.setSelectedCoordinate(null);
-        this.executeSwap(from, to);
+        this.onSwap(from, to);
       }
     }
   }
 
-  private handleTouchEnd(clientX: number, clientY: number, pointerId: number | string): void {
-    if (!this.dragStart || this.dragStart.id !== pointerId) return;
-
-    // If released on a cell quickly (tap gesture), check two-tap
-    const pos = this.getRelativeCoordinates(clientX, clientY);
-    const cell = this.renderer.getCellCoordinatesFromPixel(pos.x, pos.y);
-
-    if (cell && this.renderer.getSelectedCoordinate()) {
-      const prev = this.renderer.getSelectedCoordinate()!;
-      if (this.areAdjacent(prev, cell)) {
-        this.renderer.setSelectedCoordinate(null);
-        this.dragStart = null;
-        this.executeSwap(prev, cell);
-        return;
-      }
+  private onPointerUp(id: number | string): void {
+    if (this.dragStart && this.dragStart.id === id) {
+      this.dragStart = null;
     }
-
-    this.dragStart = null;
-  }
-
-  private executeSwap(from: Coordinate, to: Coordinate): void {
-    this.setLocked(true);
-    this.onSwap(from, to);
   }
 
   public areAdjacent(c1: Coordinate, c2: Coordinate): boolean {

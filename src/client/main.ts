@@ -174,10 +174,9 @@ export class MatchPopApp {
   private handleConnect(): void {
     const session = this.network.loadPersistedSession();
     if (session && session.roomCode && session.sessionToken) {
-      this.network.reconnect(session.roomCode, session.sessionToken).catch((err) => {
-        console.warn('[Network] Reconnect attempt failed:', err?.message);
-        // Only clear if in LOBBY mode and failed room is still current
-        if (this.gameState === 'LOBBY' && this.network.getRoomCode() === session.roomCode) {
+      this.network.reconnect(session.roomCode, session.sessionToken).catch(() => {
+        this.network.clearSession();
+        if (this.network.getRoomCode() === session.roomCode) {
           this.network.clearSession();
         }
       });
@@ -220,21 +219,15 @@ export class MatchPopApp {
 
   private handlePlayerSwap(from: Coordinate, to: Coordinate): void {
     if (this.gameState !== 'IN_GAME') return;
-    const localId = this.network.getPlayerId();
-    if (!localId || localId !== this.activePlayerId) {
-      console.warn('[Input] Rejected swap: Not local player turn', { localId, activeId: this.activePlayerId });
-      this.updateInputLockState();
-      return;
-    }
+    if (this.network.getPlayerId() !== this.activePlayerId) return;
 
     this.input.setLocked(true);
     if (this.moveTimeout) clearTimeout(this.moveTimeout);
     this.moveTimeout = setTimeout(() => {
-      if (this.gameState === 'IN_GAME') {
-        this.isCascadeAnimating = false;
+      if (this.gameState === 'IN_GAME' && !this.isCascadeAnimating) {
         this.updateInputLockState();
       }
-    }, 3500); // 3.5s failsafe watchdog
+    }, 4000);
     this.network.sendMove(from, to);
   }
 
@@ -269,13 +262,6 @@ export class MatchPopApp {
       this.activePlayerId = payload.activePlayerId;
       this.currentLevel = payload.level || 1;
       this.currentTargetScore = payload.targetScore || 2000;
-      this.currentRound = payload.round || 1;
-
-      const pid = this.network.getPlayerId();
-      if (pid) {
-        this.lobbyUI.setLocalPlayerId(pid);
-        this.hud.setLocalPlayerId(pid);
-      }
 
       const activePlayer = this.currentPlayers.find((p) => p.playerId === payload.activePlayerId);
       this.activeSlot = activePlayer ? activePlayer.slot : 0;
@@ -284,15 +270,12 @@ export class MatchPopApp {
       this.hud.show();
       this.hud.setRoomCode(this.network.getRoomCode());
       this.hud.updatePlayers(this.currentPlayers);
-      this.hud.updateLevel(this.currentLevel, 0, this.currentTargetScore, this.currentRound, this.maxRounds);
+      this.hud.updateLevel(this.currentLevel, 0, this.currentTargetScore);
       this.hud.updateTurn(
         payload.activePlayerId,
         activePlayer ? activePlayer.name : 'Player',
         payload.turnExpiresAt,
-        payload.turnDurationMs,
-        this.currentRound,
-        this.maxRounds,
-        payload.serverTimestamp
+        payload.turnDurationMs
       );
 
       this.renderer.resize();
@@ -433,16 +416,11 @@ export class MatchPopApp {
   }
 
   private updateInputLockState(): void {
-    if (this.gameState !== 'IN_GAME') {
+    if (this.gameState !== 'IN_GAME' || this.isCascadeAnimating) {
       this.input.setLocked(true);
       return;
     }
-    if (this.isCascadeAnimating) {
-      this.input.setLocked(true);
-      return;
-    }
-    const myId = this.network.getPlayerId();
-    const isMyTurn = Boolean(myId && myId === this.activePlayerId);
+    const isMyTurn = this.network.getPlayerId() === this.activePlayerId;
     this.input.setLocked(!isMyTurn);
   }
 
