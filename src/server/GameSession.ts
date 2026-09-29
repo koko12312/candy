@@ -92,6 +92,10 @@ export class GameSession {
 
     this.startTurnCountdown();
 
+    this.room.level = this.level;
+    this.room.targetScore = this.targetScore;
+    this.room.currentRound = this.round;
+
     this.callbacks.onGameStart({
       seed: this.seed,
       board: Match3Engine.cloneBoard(this.board),
@@ -100,7 +104,8 @@ export class GameSession {
       level: this.level,
       targetScore: this.targetScore,
       turnExpiresAt: this.turnExpiresAt,
-      turnDurationMs: this.turnDurationMs
+      turnDurationMs: this.turnDurationMs,
+      serverTimestamp: Date.now()
     });
   }
 
@@ -326,6 +331,9 @@ export class GameSession {
           this.level++;
           this.targetScore = this.targetScore + (this.level * 2000);
           this.round = 1;
+          this.room.level = this.level;
+          this.room.targetScore = this.targetScore;
+          this.room.currentRound = this.round;
           
           const reshuffled = this.engine.reshuffleBoard(this.board, this.prng);
           this.board = reshuffled.newBoard;
@@ -339,6 +347,7 @@ export class GameSession {
           
           // Re-start turn countdown without advancing player, or advance? Let's just advance.
           this.advanceTurn();
+          this.room.currentRound = this.round;
           const nextP = this.getCurrentPlayer();
           if (nextP && this.room.status === 'IN_GAME') {
             this.emitTurnChange(nextP);
@@ -347,6 +356,7 @@ export class GameSession {
         }
 
         const wrapped = this.advanceTurn();
+        this.room.currentRound = this.round;
         if (wrapped && this.round > this.room.settings.maxRounds) {
           this.triggerGameOver();
           return;
@@ -402,6 +412,7 @@ export class GameSession {
    */
   private emitTurnChange(player: RoomPlayer): void {
     this.startTurnCountdown();
+    this.room.currentRound = this.round;
 
     this.callbacks.onTurnChange({
       activePlayerId: player.playerId,

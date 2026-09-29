@@ -48,6 +48,8 @@ export class MatchPopApp {
   
   private currentLevel = 1;
   private currentTargetScore = 2000;
+  private currentRound = 1;
+  private maxRounds = 10;
 
   constructor() {
     // 1. Audio Engine & Music Sequencer
@@ -262,6 +264,7 @@ export class MatchPopApp {
       this.activePlayerId = payload.activePlayerId;
       this.currentLevel = payload.level || 1;
       this.currentTargetScore = payload.targetScore || 2000;
+      this.currentRound = payload.round || 1;
 
       const activePlayer = this.currentPlayers.find((p) => p.playerId === payload.activePlayerId);
       this.activeSlot = activePlayer ? activePlayer.slot : 0;
@@ -270,12 +273,14 @@ export class MatchPopApp {
       this.hud.show();
       this.hud.setRoomCode(this.network.getRoomCode());
       this.hud.updatePlayers(this.currentPlayers);
-      this.hud.updateLevel(this.currentLevel, 0, this.currentTargetScore);
+      this.hud.updateLevel(this.currentLevel, 0, this.currentTargetScore, this.currentRound, this.maxRounds);
       this.hud.updateTurn(
         payload.activePlayerId,
         activePlayer ? activePlayer.name : 'Player',
         payload.turnExpiresAt,
-        payload.turnDurationMs
+        payload.turnDurationMs,
+        this.currentRound,
+        this.maxRounds
       );
 
       this.renderer.resize();
@@ -310,7 +315,7 @@ export class MatchPopApp {
       this.hud.updatePlayers(this.currentPlayers);
       
       const totalScore = this.currentPlayers.reduce((sum, p) => sum + p.score, 0);
-      this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore);
+      this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore, this.currentRound, this.maxRounds);
     }
 
     try {
@@ -328,14 +333,21 @@ export class MatchPopApp {
   private handleTurnChange(payload: TurnChangePayload): void {
     this.activePlayerId = payload.activePlayerId;
     this.activeSlot = payload.slot;
+    if (payload.round) this.currentRound = payload.round;
 
     const activePlayer = this.currentPlayers.find((p) => p.playerId === payload.activePlayerId);
     this.hud.updateTurn(
       payload.activePlayerId,
       activePlayer ? activePlayer.name : `Slot ${payload.slot + 1}`,
       payload.turnExpiresAt,
-      payload.turnDurationMs
+      payload.turnDurationMs,
+      this.currentRound,
+      this.maxRounds,
+      payload.serverTimestamp
     );
+
+    const totalScore = this.currentPlayers.reduce((sum, p) => sum + p.score, 0);
+    this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore, this.currentRound, this.maxRounds);
 
     this.updateInputLockState();
   }
@@ -345,7 +357,14 @@ export class MatchPopApp {
     const activePlayer = this.currentPlayers.find((p) => p.playerId === payload.nextPlayerId);
     if (activePlayer) {
       this.activeSlot = activePlayer.slot;
-      this.hud.updateTurn(payload.nextPlayerId, activePlayer.name, Date.now() + 20000, 20000);
+      this.hud.updateTurn(
+        payload.nextPlayerId,
+        activePlayer.name,
+        Date.now() + 20000,
+        20000,
+        this.currentRound,
+        this.maxRounds
+      );
     }
     this.updateInputLockState();
   }
@@ -367,7 +386,7 @@ export class MatchPopApp {
     
     // Update HUD
     const totalScore = this.currentPlayers.reduce((s, p) => s + p.score, 0);
-    this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore);
+    this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore, this.currentRound, this.maxRounds);
   }
 
   private handleGameOver(payload: import('../shared/types').GameOverPayload): void {
@@ -385,6 +404,8 @@ export class MatchPopApp {
     this.activePlayerId = payload.activePlayerId;
     if (payload.level) this.currentLevel = payload.level;
     if (payload.targetScore) this.currentTargetScore = payload.targetScore;
+    if (payload.round) this.currentRound = payload.round;
+    if (payload.settings?.maxRounds) this.maxRounds = payload.settings.maxRounds;
 
     const activePlayer = this.currentPlayers.find((p) => p.playerId === payload.activePlayerId);
     this.activeSlot = activePlayer ? activePlayer.slot : 0;
@@ -396,12 +417,15 @@ export class MatchPopApp {
       this.hud.setRoomCode(payload.roomCode);
       this.hud.updatePlayers(payload.players);
       const totalScore = this.currentPlayers.reduce((sum, p) => sum + p.score, 0);
-      this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore);
+      this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore, this.currentRound, this.maxRounds);
       this.hud.updateTurn(
         payload.activePlayerId,
         activePlayer ? activePlayer.name : 'Player',
         payload.turnExpiresAt,
-        payload.turnDurationMs
+        payload.turnDurationMs,
+        this.currentRound,
+        this.maxRounds,
+        payload.serverTimestamp
       );
 
       this.renderer.resize();
