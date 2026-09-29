@@ -23,11 +23,6 @@ export class HUD {
   private turnBanner: HTMLElement;
   private playersStrip: HTMLElement;
 
-  private levelBadge: HTMLElement;
-  private roundBadge: HTMLElement;
-  private scoreTargetText: HTMLElement;
-  private scoreProgressFill: HTMLElement;
-
   private gameOverModal: HTMLElement;
   private podiumEntries: HTMLElement;
   private btnPodiumLobby: HTMLButtonElement;
@@ -52,11 +47,6 @@ export class HUD {
     this.timerNumberDisplay = this.container.querySelector('#timer-number-display') as HTMLElement;
     this.turnBanner = this.container.querySelector('#turn-banner') as HTMLElement;
     this.playersStrip = this.container.querySelector('#hud-players-strip') as HTMLElement;
-
-    this.levelBadge = this.container.querySelector('#hud-level-badge') as HTMLElement;
-    this.roundBadge = this.container.querySelector('#hud-round-badge') as HTMLElement;
-    this.scoreTargetText = this.container.querySelector('#hud-score-target-text') as HTMLElement;
-    this.scoreProgressFill = this.container.querySelector('#hud-score-progress-fill') as HTMLElement;
 
     this.gameOverModal = this.container.querySelector('#game-over-modal') as HTMLElement;
     this.podiumEntries = this.container.querySelector('#podium-entries') as HTMLElement;
@@ -129,20 +119,15 @@ export class HUD {
     }, 2500);
   }
 
-  public updateLevel(level: number, currentTotalScore: number, targetScore: number, round = 1, maxRounds = 10): void {
-    if (this.levelBadge) {
-      this.levelBadge.textContent = `LEVEL ${level}`;
+  public updateLevel(level: number, currentTotalScore: number, targetScore: number): void {
+    if (!this.levelBanner) {
+      this.levelBanner = document.createElement('div');
+      this.levelBanner.className = 'level-status-banner';
+      this.levelBanner.style.cssText = 'background: rgba(0,0,0,0.5); color: white; padding: 4px 10px; border-radius: 12px; margin-top: 6px; font-weight: bold; font-size: 0.9rem; text-align: center; border: 2px solid var(--accent-yellow); pointer-events: none;';
+      // Insert right after the room code badge area
+      this.roomCodeBadge.parentElement?.appendChild(this.levelBanner);
     }
-    if (this.roundBadge) {
-      this.roundBadge.textContent = `ROUND ${round}/${maxRounds}`;
-    }
-    if (this.scoreTargetText) {
-      this.scoreTargetText.textContent = `${currentTotalScore.toLocaleString()} / ${targetScore.toLocaleString()}`;
-    }
-    if (this.scoreProgressFill) {
-      const pct = Math.min(100, Math.max(0, (currentTotalScore / Math.max(1, targetScore)) * 100));
-      this.scoreProgressFill.style.width = `${pct}%`;
-    }
+    this.levelBanner.innerHTML = `Level ${level} • Score: ${currentTotalScore.toLocaleString()} / ${targetScore.toLocaleString()}`;
   }
 
   private bindEvents(): void {
@@ -173,32 +158,10 @@ export class HUD {
     this.btnMusicToggle.textContent = musicMuted ? '🎵❌' : '🎵';
   }
 
-  public updateTurn(
-    activePlayerId: string,
-    playerName: string,
-    expiresAt: number,
-    durationMs = 20000,
-    round = 1,
-    maxRounds = 10,
-    serverTimestamp?: number
-  ): void {
+  public updateTurn(activePlayerId: string, playerName: string, expiresAt: number, durationMs = 20000): void {
     this.activePlayerId = activePlayerId;
+    this.turnExpiresAt = expiresAt;
     this.turnDurationMs = durationMs;
-
-    if (this.roundBadge) {
-      this.roundBadge.textContent = `ROUND ${round}/${maxRounds}`;
-    }
-
-    // Resolve remaining time robustly against clock skew:
-    let remainingMs = durationMs;
-    if (serverTimestamp && expiresAt) {
-      remainingMs = Math.max(0, expiresAt - serverTimestamp);
-    } else if (expiresAt) {
-      const diff = expiresAt - Date.now();
-      // If diff is <= 0 or absurdly large due to clock difference, fallback to full duration
-      remainingMs = (diff > 500 && diff <= durationMs) ? diff : durationMs;
-    }
-    this.turnExpiresAt = Date.now() + remainingMs;
 
     const isMyTurn = activePlayerId === this.localPlayerId;
     if (isMyTurn) {

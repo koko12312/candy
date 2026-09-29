@@ -45,9 +45,6 @@ export class Room {
 
   public players: RoomPlayer[] = [];
   public spectators: RoomSpectator[] = [];
-  public level = 1;
-  public targetScore = 2000;
-  public currentRound = 1;
 
   // Reconnection timers indexed by playerId
   private disconnectTimers: Map<string, NodeJS.Timeout> = new Map();
@@ -195,9 +192,6 @@ export class Room {
    */
   public resetToLobby(): void {
     this.status = 'LOBBY';
-    this.level = 1;
-    this.targetScore = 2000;
-    this.currentRound = 1;
     for (const p of this.players) {
       p.isReady = p.isHost;
       p.score = 0;
@@ -401,10 +395,7 @@ export class Room {
       players: playersDTO,
       spectators: spectatorsDTO,
       spectatorCount: this.spectators.length,
-      settings: { ...this.settings },
-      level: this.level,
-      targetScore: this.targetScore,
-      currentRound: this.currentRound
+      settings: { ...this.settings }
     };
   }
 

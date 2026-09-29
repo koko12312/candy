@@ -48,8 +48,6 @@ export class MatchPopApp {
   
   private currentLevel = 1;
   private currentTargetScore = 2000;
-  private currentRound = 1;
-  private maxRounds = 10;
 
   constructor() {
     // 1. Audio Engine & Music Sequencer
@@ -176,9 +174,10 @@ export class MatchPopApp {
   private handleConnect(): void {
     const session = this.network.loadPersistedSession();
     if (session && session.roomCode && session.sessionToken) {
-      this.network.reconnect(session.roomCode, session.sessionToken).catch(() => {
-        this.network.clearSession();
-        if (this.network.getRoomCode() === session.roomCode) {
+      this.network.reconnect(session.roomCode, session.sessionToken).catch((err) => {
+        console.warn('[Network] Reconnect attempt failed:', err?.message);
+        // Only clear if in LOBBY mode and failed room is still current
+        if (this.gameState === 'LOBBY' && this.network.getRoomCode() === session.roomCode) {
           this.network.clearSession();
         }
       });
@@ -221,15 +220,21 @@ export class MatchPopApp {
 
   private handlePlayerSwap(from: Coordinate, to: Coordinate): void {
     if (this.gameState !== 'IN_GAME') return;
-    if (this.network.getPlayerId() !== this.activePlayerId) return;
+    const localId = this.network.getPlayerId();
+    if (!localId || localId !== this.activePlayerId) {
+      console.warn('[Input] Rejected swap: Not local player turn', { localId, activeId: this.activePlayerId });
+      this.updateInputLockState();
+      return;
+    }
 
     this.input.setLocked(true);
     if (this.moveTimeout) clearTimeout(this.moveTimeout);
     this.moveTimeout = setTimeout(() => {
-      if (this.gameState === 'IN_GAME' && !this.isCascadeAnimating) {
+      if (this.gameState === 'IN_GAME') {
+        this.isCascadeAnimating = false;
         this.updateInputLockState();
       }
-    }, 4000);
+    }, 3500); // 3.5s failsafe watchdog
     this.network.sendMove(from, to);
   }
 
@@ -266,6 +271,12 @@ export class MatchPopApp {
       this.currentTargetScore = payload.targetScore || 2000;
       this.currentRound = payload.round || 1;
 
+      const pid = this.network.getPlayerId();
+      if (pid) {
+        this.lobbyUI.setLocalPlayerId(pid);
+        this.hud.setLocalPlayerId(pid);
+      }
+
       const activePlayer = this.currentPlayers.find((p) => p.playerId === payload.activePlayerId);
       this.activeSlot = activePlayer ? activePlayer.slot : 0;
 
@@ -280,7 +291,8 @@ export class MatchPopApp {
         payload.turnExpiresAt,
         payload.turnDurationMs,
         this.currentRound,
-        this.maxRounds
+        this.maxRounds,
+        payload.serverTimestamp
       );
 
       this.renderer.resize();
@@ -315,7 +327,7 @@ export class MatchPopApp {
       this.hud.updatePlayers(this.currentPlayers);
       
       const totalScore = this.currentPlayers.reduce((sum, p) => sum + p.score, 0);
-      this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore, this.currentRound, this.maxRounds);
+      this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore);
     }
 
     try {
@@ -333,21 +345,14 @@ export class MatchPopApp {
   private handleTurnChange(payload: TurnChangePayload): void {
     this.activePlayerId = payload.activePlayerId;
     this.activeSlot = payload.slot;
-    if (payload.round) this.currentRound = payload.round;
 
     const activePlayer = this.currentPlayers.find((p) => p.playerId === payload.activePlayerId);
     this.hud.updateTurn(
       payload.activePlayerId,
       activePlayer ? activePlayer.name : `Slot ${payload.slot + 1}`,
       payload.turnExpiresAt,
-      payload.turnDurationMs,
-      this.currentRound,
-      this.maxRounds,
-      payload.serverTimestamp
+      payload.turnDurationMs
     );
-
-    const totalScore = this.currentPlayers.reduce((sum, p) => sum + p.score, 0);
-    this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore, this.currentRound, this.maxRounds);
 
     this.updateInputLockState();
   }
@@ -357,14 +362,7 @@ export class MatchPopApp {
     const activePlayer = this.currentPlayers.find((p) => p.playerId === payload.nextPlayerId);
     if (activePlayer) {
       this.activeSlot = activePlayer.slot;
-      this.hud.updateTurn(
-        payload.nextPlayerId,
-        activePlayer.name,
-        Date.now() + 20000,
-        20000,
-        this.currentRound,
-        this.maxRounds
-      );
+      this.hud.updateTurn(payload.nextPlayerId, activePlayer.name, Date.now() + 20000, 20000);
     }
     this.updateInputLockState();
   }
@@ -386,7 +384,7 @@ export class MatchPopApp {
     
     // Update HUD
     const totalScore = this.currentPlayers.reduce((s, p) => s + p.score, 0);
-    this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore, this.currentRound, this.maxRounds);
+    this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore);
   }
 
   private handleGameOver(payload: import('../shared/types').GameOverPayload): void {
@@ -404,8 +402,6 @@ export class MatchPopApp {
     this.activePlayerId = payload.activePlayerId;
     if (payload.level) this.currentLevel = payload.level;
     if (payload.targetScore) this.currentTargetScore = payload.targetScore;
-    if (payload.round) this.currentRound = payload.round;
-    if (payload.settings?.maxRounds) this.maxRounds = payload.settings.maxRounds;
 
     const activePlayer = this.currentPlayers.find((p) => p.playerId === payload.activePlayerId);
     this.activeSlot = activePlayer ? activePlayer.slot : 0;
@@ -417,15 +413,12 @@ export class MatchPopApp {
       this.hud.setRoomCode(payload.roomCode);
       this.hud.updatePlayers(payload.players);
       const totalScore = this.currentPlayers.reduce((sum, p) => sum + p.score, 0);
-      this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore, this.currentRound, this.maxRounds);
+      this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore);
       this.hud.updateTurn(
         payload.activePlayerId,
         activePlayer ? activePlayer.name : 'Player',
         payload.turnExpiresAt,
-        payload.turnDurationMs,
-        this.currentRound,
-        this.maxRounds,
-        payload.serverTimestamp
+        payload.turnDurationMs
       );
 
       this.renderer.resize();
@@ -440,11 +433,16 @@ export class MatchPopApp {
   }
 
   private updateInputLockState(): void {
-    if (this.gameState !== 'IN_GAME' || this.isCascadeAnimating) {
+    if (this.gameState !== 'IN_GAME') {
       this.input.setLocked(true);
       return;
     }
-    const isMyTurn = this.network.getPlayerId() === this.activePlayerId;
+    if (this.isCascadeAnimating) {
+      this.input.setLocked(true);
+      return;
+    }
+    const myId = this.network.getPlayerId();
+    const isMyTurn = Boolean(myId && myId === this.activePlayerId);
     this.input.setLocked(!isMyTurn);
   }
 
