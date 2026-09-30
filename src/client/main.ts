@@ -334,6 +334,7 @@ export class MatchPopApp {
     this.activePlayerId = payload.activePlayerId;
     this.activeSlot = payload.slot;
     if (payload.round) this.currentRound = payload.round;
+    if (payload.maxRounds !== undefined) this.maxRounds = payload.maxRounds;
 
     const activePlayer = this.currentPlayers.find((p) => p.playerId === payload.activePlayerId);
     this.hud.updateTurn(
@@ -379,6 +380,9 @@ export class MatchPopApp {
     this.currentTargetScore = payload.newTargetScore;
     if (payload.round !== undefined) {
       this.currentRound = payload.round;
+    }
+    if (payload.maxRounds !== undefined) {
+      this.maxRounds = payload.maxRounds;
     }
     this.currentBoard = payload.newBoard;
     this.renderer.setBoard(payload.newBoard);

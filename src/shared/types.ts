@@ -222,6 +222,7 @@ export interface TurnChangePayload {
   turnExpiresAt: number;
   turnDurationMs: number;
   serverTimestamp: number;
+  maxRounds?: number;
 }
 
 export interface TurnTimeoutPayload {
@@ -241,6 +242,7 @@ export interface LevelUpPayload {
   newBoard: Tile[][];
   events: EngineEvent[];
   round?: number;
+  maxRounds?: number;
 }
 
 export interface GameOverPayload {

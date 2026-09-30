@@ -43,6 +43,7 @@ export class GameSession {
   public turnStartedAt = 0;
   public turnExpiresAt = 0;
   public turnDurationMs: number;
+  private baseMaxRounds: number;
 
   private turnTimer: NodeJS.Timeout | null = null;
   private animationTimer: NodeJS.Timeout | null = null;
@@ -56,6 +57,7 @@ export class GameSession {
     this.seed = customSeed ?? Math.floor(Math.random() * 1000000);
     this.prng = new PRNG(this.seed);
     this.turnDurationMs = (this.room.settings.turnDurationSeconds || 20) * 1000;
+    this.baseMaxRounds = this.room.settings.maxRounds || 10;
   }
 
   /**
@@ -327,13 +329,20 @@ export class GameSession {
         const totalScore = this.room.players.reduce((sum, p) => sum + p.score, 0);
 
         if (totalScore >= this.targetScore) {
+          // Calculate leftover rounds from previous level to carry over as bonus turns
+          const currentMaxRounds = this.room.settings.maxRounds || this.baseMaxRounds;
+          const leftoverRounds = Math.max(0, currentMaxRounds - this.round);
+
           // Level Up! Advance levels dynamically if a massive combo clears multiple targets
           while (totalScore >= this.targetScore) {
             this.level++;
             // Progressive target score (e.g. L1: 2000, L2: 5000, L3: 9000, etc.)
             this.targetScore = this.targetScore + (this.level * 2000) + 1000;
           }
-          this.round = 1; // Fresh rounds for the new level
+
+          // Full fresh moves for the new level PLUS any leftover turns carried over
+          this.room.settings.maxRounds = this.baseMaxRounds + leftoverRounds;
+          this.round = 1;
           this.room.level = this.level;
           this.room.targetScore = this.targetScore;
           this.room.currentRound = this.round;
@@ -346,7 +355,8 @@ export class GameSession {
             newTargetScore: this.targetScore,
             newBoard: Match3Engine.cloneBoard(this.board),
             events: reshuffled.events,
-            round: this.round
+            round: this.round,
+            maxRounds: this.room.settings.maxRounds
           });
           
           this.advanceTurn();
@@ -423,7 +433,8 @@ export class GameSession {
       round: this.round,
       turnExpiresAt: this.turnExpiresAt,
       turnDurationMs: this.turnDurationMs,
-      serverTimestamp: Date.now()
+      serverTimestamp: Date.now(),
+      maxRounds: this.room.settings.maxRounds
     });
   }
 

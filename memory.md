@@ -15,11 +15,11 @@
   - Cached keystore in GitHub Actions (`.github/workflows/build-apk.yml`) to ensure every APK build is signed with the identical key and installs seamlessly over existing versions without package conflicts.
 
 ## Key Fixes & Milestones
-- **Level Progression Overhaul**:
+- **Level Progression Overhaul & Turn Carry-Over**:
   - Implemented dynamic target score thresholding in `GameSession.ts` (`while (totalScore >= this.targetScore)`) to handle multi-level leaps smoothly during high-combo cascades.
-  - Added round replenishment on level up (`round = 1`) so moves reset and players can progress to higher levels instead of hitting an arbitrary game over.
-  - Updated client `handleLevelUp` in `main.ts` to sync `currentRound`, refresh the HUD goal progress bar, trigger the level-up celebration overlay, and play the fanfare.
-  - Deployed the authoritative backend live to Render (`srv-damj9n942hec739b8cf0`, deploy `dep-dau891093c1s73d566p0`), resolving the stale production server instance (which had been frozen on an un-progressed commit from September 18) so level up and score progression now execute seamlessly in online play.
+  - Added leftover turns carry-over on level up (`room.settings.maxRounds = baseMaxRounds + leftoverRounds`), preserving every remaining move from the previous round so players don't lose leftover turns when beating a level early.
+  - Updated client `handleLevelUp` and `handleTurnChange` in `main.ts` to sync `currentRound` and `maxRounds`, refreshing the HUD goal progress bar, triggering the level-up celebration overlay, and playing the fanfare.
+  - Deployed the authoritative backend live to Render (`srv-damj9n942hec739b8cf0`), ensuring that the production server in the cloud is always synchronized with code changes. Every change affecting game logic is pushed and deployed to Render immediately.
 
 ## Global Rules & Directives
 - **Rule 6 (Strict Edit Scope & Non-Destructive Changes)**:
