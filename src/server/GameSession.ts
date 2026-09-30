@@ -347,14 +347,24 @@ export class GameSession {
           this.room.targetScore = this.targetScore;
           this.room.currentRound = this.round;
           
-          const reshuffled = this.engine.reshuffleBoard(this.board, this.prng);
-          this.board = reshuffled.newBoard;
+          // Only reshuffle if the board happens to have no valid moves left
+          let levelUpEvents: EngineEvent[] = [];
+          if (!this.engine.hasValidMoves(this.board)) {
+            const reshuffled = this.engine.reshuffleBoard(this.board, this.prng);
+            this.board = reshuffled.newBoard;
+            levelUpEvents = reshuffled.events;
+            this.callbacks.onReshuffle({
+              reason: 'NO_VALID_MOVES',
+              newBoard: Match3Engine.cloneBoard(this.board),
+              events: reshuffled.events
+            });
+          }
           
           this.callbacks.onLevelUp?.({
             newLevel: this.level,
             newTargetScore: this.targetScore,
             newBoard: Match3Engine.cloneBoard(this.board),
-            events: reshuffled.events,
+            events: levelUpEvents,
             round: this.round,
             maxRounds: this.room.settings.maxRounds
           });
