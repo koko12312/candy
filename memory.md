@@ -14,14 +14,8 @@
   - Permanent debug keystore located at `android/app/matchpop-debug.keystore` with fixed credentials (`matchpop123`, alias `matchpop`) configured in `android/app/build.gradle`.
   - Cached keystore in GitHub Actions (`.github/workflows/build-apk.yml`) to ensure every APK build is signed with the identical key and installs seamlessly over existing versions without package conflicts.
 
-## Key Fixes & Milestones
-1. **Restored Match Progress UI & Detonation FX**:
-   - Kept the Level & Round indicator, Team Goal score track, praise popups ("SWEET!", "TASTY!", "DELICIOUS!"), and smooth bomb detonations.
-2. **Touch Engine Overhaul**:
-   - Implemented `setPointerCapture` on `pointerdown` and `releasePointerCapture` on end.
-   - Dual-event architecture: PointerEvents + TouchEvents fallback for older Android WebViews.
-   - Window-level touch release handlers prevent stuck touches if finger exits canvas.
-   - 3-second auto-release watchdog resets drag state automatically if OS interrupts a touch event.
-   - Fixed `updateInputLockState` in `main.ts` with `localPlayerId` fallback to ensure input unlocks reliably across multiple consecutive matches.
-3. **APK Signing**:
-   - Retained the permanent keystore configuration to prevent signature package conflicts on updates.
+## Global Rules & Directives
+- **Rule 6 (Strict Edit Scope & Non-Destructive Changes)**:
+  - Fix and edit strictly and exactly what LO specifies.
+  - Never modify, redesign, refactor, remove, or revert unrelated features, UI elements, or functioning code.
+  - Always protect and preserve what is already working.
