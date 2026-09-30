@@ -6,6 +6,9 @@
   <title>Match Pop Multiplayer</title>
   <meta name="description" content="Real-time 1-4 Player Multiplayer Candy Match-3 on a Shared Board" />
   <meta name="theme-color" content="#18042c" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     :root {
       --sat: env(safe-area-inset-top, 0px);
@@ -398,6 +401,90 @@
       to { box-shadow: 0 0 20px rgba(255, 0, 127, 0.9); }
     }
 
+    /* Match Progress & Goal Bar */
+    .game-match-bar {
+      flex-shrink: 0;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 6px calc(16px + var(--sar)) 6px calc(16px + var(--sal));
+      background: rgba(18, 2, 34, 0.92);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      z-index: 19;
+    }
+
+    .match-bar-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge-level {
+      font-size: 0.8rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #ff007b, #ff7b00);
+      color: #fff;
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+      box-shadow: 0 2px 6px rgba(255, 0, 123, 0.4);
+    }
+
+    .badge-round {
+      font-size: 0.8rem;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--accent-yellow);
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.3px;
+    }
+
+    .match-score-progress {
+      flex: 1;
+      max-width: 280px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .score-progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .score-title {
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+
+    .score-values {
+      color: #fff;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .score-progress-track {
+      width: 100%;
+      height: 7px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .score-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ffd000, #00e5ff, #ff2d87);
+      border-radius: 999px;
+      transition: width 0.3s ease-out;
+      box-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
+    }
+
     /* Center Canvas Area */
     .canvas-container {
       position: relative;
@@ -420,15 +507,10 @@
 
     #bg-canvas {
       z-index: 1;
-      pointer-events: none;
     }
 
     #interactive-canvas {
       z-index: 2;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-      cursor: pointer;
     }
 
     /* Bottom HUD - Players */
@@ -564,18 +646,25 @@
         top: 0;
         left: 0;
         right: 0;
-        height: 50px;
+        height: 48px;
+      }
+      .game-match-bar {
+        position: absolute;
+        top: 48px;
+        left: 0;
+        right: 220px;
+        height: 36px;
       }
       .canvas-container {
-        padding-top: 50px;
+        padding-top: 84px;
         flex: 1;
         height: 100%;
         box-sizing: border-box;
       }
       .game-bottom-bar {
         width: 220px;
-        height: calc(100% - 50px);
-        margin-top: 50px;
+        height: calc(100% - 48px);
+        margin-top: 48px;
         border-top: none;
         border-left: 1px solid rgba(255, 255, 255, 0.1);
       }
@@ -586,7 +675,7 @@
       }
     }
   </style>
-  <script type="module" crossorigin src="./assets/index-C3CDFfCX.js"></script>
+  <script type="module" crossorigin src="./assets/index-D-lx2pJL.js"></script>
 </head>
 <body>
   <div id="app">
@@ -688,6 +777,23 @@
 
         <!-- Active Player Turn Indicator -->
         <div id="turn-banner" class="turn-status-banner">Waiting...</div>
+      </div>
+
+      <!-- Dedicated Match Status / Goal Progress Bar -->
+      <div id="hud-match-bar" class="game-match-bar">
+        <div class="match-bar-info">
+          <span id="hud-level-badge" class="badge-level">LEVEL 1</span>
+          <span id="hud-round-badge" class="badge-round">ROUND 1/10</span>
+        </div>
+        <div class="match-score-progress">
+          <div class="score-progress-header">
+            <span class="score-title">TEAM GOAL</span>
+            <span id="hud-score-target-text" class="score-values">0 / 2,000</span>
+          </div>
+          <div class="score-progress-track">
+            <div id="hud-score-progress-fill" class="score-progress-fill" style="width: 0%;"></div>
+          </div>
+        </div>
       </div>
 
       <!-- Center Board Layer -->

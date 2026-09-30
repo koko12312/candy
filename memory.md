@@ -1,27 +1,27 @@
-# Match Pop Multiplayer - Project Memory
+# Project Memory: Match Pop Multiplayer
 
-## Overview
-Real-time 1-4 Player Multiplayer Candy Match-3 game with HTML5 Canvas client, Node.js + Socket.IO server backend, and Capacitor Android compilation via GitHub Actions.
+## Architecture & Conventions
+- **Language/Stack**: TypeScript, HTML5 Dual Canvas (Retina scaled), Socket.io, Vite, Capacitor for Android APK packaging.
+- **Client Architecture**:
+  - `src/client/input/InputHandler.ts`: Mobile touch & pointer engine with dual PointerEvent + TouchEvent handling, `setPointerCapture`, window-level touch release tracking, and a 3-second failsafe gesture watchdog.
+  - `src/client/render/CanvasRenderer.ts`: Dual-canvas system (bg canvas + interactive game canvas) with candy rendering, special candy detonations (striped laser sweeps, wrapped shockwaves, bomb detonations), particles, combo praise text, and CSS pixel coordinate mapping.
+  - `src/client/ui/HUD.ts`: Top HUD with room code, mute/SFX controls, exit button, turn timer ring, turn banner, and match goal/level progress bar.
+  - `src/client/main.ts`: Orchestrates client network events, audio playback, level progression, and turn lock states (`localPlayerId` & `activePlayerId` syncing).
+- **Server Architecture**:
+  - `src/server/Room.ts`: Room lifecycle management, player slot allocation (0..3), 45-second reconnect grace period, spectator support, rematch lobby resets.
+  - `src/server/GameSession.ts`: Authoritative match-3 logic, round and level progression, special candy combinatorics, board gravity refills, cascade settlement.
+- **Android APK Build**:
+  - Permanent debug keystore located at `android/app/matchpop-debug.keystore` with fixed credentials (`matchpop123`, alias `matchpop`) configured in `android/app/build.gradle`.
+  - Cached keystore in GitHub Actions (`.github/workflows/build-apk.yml`) to ensure every APK build is signed with the identical key and installs seamlessly over existing versions without package conflicts.
 
-## Recent Milestones & Fixes
-
-### Permanent Signing Keystore Setup (Resolves APK Package Conflicts)
-- **Problem**: When installing a newer APK build over an older one on Android, Android reported "Package conflict" / "App not installed as package appears to be invalid".
-- **Root Cause**: GitHub Actions builds were signed using ephemeral debug keystores generated dynamically by Gradle or lost by cache eviction. Android strictly requires every update to be signed with the exact same cryptographic certificate.
-- **Solution Applied**:
-  1. Configured `signingConfigs` in `android/app/build.gradle` pointing to `matchpop-debug.keystore` with explicit credentials (`storePassword: matchpop123`, `keyAlias: matchpop`).
-  2. Updated `.github/workflows/build-apk.yml` to generate `android/app/matchpop-debug.keystore` if absent using standard `keytool` with 10,000 days validity.
-  3. Ensured `versionCode` increments sequentially (`1000 + GITHUB_RUN_NUMBER`) and `versionName` tracks `package.json`.
-  4. Moving forward, every build will use the exact same signature, enabling seamless updates without uninstalling.
-
-### Touch Overhaul Architecture (v1.0.8)
-- Fixed session wipe trap in `main.ts` where background reconnect attempts on old rooms could run `clearSession()` and wipe active player ID to `""`.
-- Completely rebuilt `InputHandler.ts` with hardware pointer capture (`setPointerCapture`), dual swipe and tap-tap mode, 12px mobile swipe threshold, and 4.5s self-healing lock watchdog.
-- Isolated `#bg-canvas` with `pointer-events: none`.
-
-### Visuals & Multiplayer Sync (v1.0.7)
-- Fixed `SPECIAL_DETONATE` property crash (`affectedTiles`).
-- Full gravity drop and spawn cascade animation delays.
-- Candy Crush praise words with Google Font `Fredoka`.
-- Real-time Match & Round progress bar with team target tracking.
-- Clock-skew immune countdown timer on guest clients.
+## Key Fixes & Milestones
+1. **Restored Match Progress UI & Detonation FX**:
+   - Kept the Level & Round indicator, Team Goal score track, praise popups ("SWEET!", "TASTY!", "DELICIOUS!"), and smooth bomb detonations.
+2. **Touch Engine Overhaul**:
+   - Implemented `setPointerCapture` on `pointerdown` and `releasePointerCapture` on end.
+   - Dual-event architecture: PointerEvents + TouchEvents fallback for older Android WebViews.
+   - Window-level touch release handlers prevent stuck touches if finger exits canvas.
+   - 3-second auto-release watchdog resets drag state automatically if OS interrupts a touch event.
+   - Fixed `updateInputLockState` in `main.ts` with `localPlayerId` fallback to ensure input unlocks reliably across multiple consecutive matches.
+3. **APK Signing**:
+   - Retained the permanent keystore configuration to prevent signature package conflicts on updates.

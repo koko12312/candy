@@ -17,7 +17,8 @@ export class InputHandler {
 
   private isLocked = false;
   private dragStart: DragStartInfo | null = null;
-  private swipeThreshold = 14; // Lowered from 24px for responsive mobile touch
+  private swipeThreshold = 14; // Responsive swipe distance
+  private watchdogTimer: any = null;
 
   constructor(canvas: HTMLCanvasElement, renderer: CanvasRenderer, onSwap: SwapCallback) {
     this.canvas = canvas;
@@ -30,8 +31,7 @@ export class InputHandler {
   public setLocked(locked: boolean): void {
     this.isLocked = locked;
     if (locked) {
-      this.dragStart = null;
-      this.renderer.setSelectedCoordinate(null);
+      this.cancelDrag();
     }
   }
 
@@ -39,62 +39,106 @@ export class InputHandler {
     return this.isLocked;
   }
 
+  public cancelDrag(): void {
+    if (this.watchdogTimer) {
+      clearTimeout(this.watchdogTimer);
+      this.watchdogTimer = null;
+    }
+    this.dragStart = null;
+    this.renderer.setSelectedCoordinate(null);
+  }
+
   private bindEvents(): void {
     if (!this.canvas || typeof this.canvas.addEventListener !== 'function') return;
 
-    // Use PointerEvents if supported, otherwise TouchEvents
+    // 1. Modern Pointer Events (Chrome, Android WebView, Modern Browsers)
     const hasPointer = typeof window !== 'undefined' && 'PointerEvent' in window;
 
     if (hasPointer) {
-      this.canvas.addEventListener('pointerdown', (e: PointerEvent) => {
-        this.onPointerDown(e.clientX, e.clientY, e.pointerId);
-        e.preventDefault();
-      });
-      this.canvas.addEventListener('pointermove', (e: PointerEvent) => {
-        this.onPointerMove(e.clientX, e.clientY, e.pointerId);
-        e.preventDefault();
-      });
-      this.canvas.addEventListener('pointerup', (e: PointerEvent) => {
-        this.onPointerUp(e.pointerId);
-      });
-      this.canvas.addEventListener('pointercancel', (e: PointerEvent) => {
-        this.onPointerUp(e.pointerId);
-      });
-    } else {
-      // Fallback for older WebView without PointerEvent
       this.canvas.addEventListener(
-        'touchstart',
-        (e: TouchEvent) => {
-          if (e.touches.length > 0) {
-            const t = e.touches[0];
-            this.onPointerDown(t.clientX, t.clientY, t.identifier);
-          }
+        'pointerdown',
+        (e: PointerEvent) => {
+          try {
+            if (this.canvas.setPointerCapture) {
+              this.canvas.setPointerCapture(e.pointerId);
+            }
+          } catch (_) {}
+          this.handleGestureStart(e.clientX, e.clientY, e.pointerId);
           e.preventDefault();
         },
         { passive: false }
       );
 
       this.canvas.addEventListener(
-        'touchmove',
-        (e: TouchEvent) => {
-          if (e.touches.length > 0) {
-            const t = e.touches[0];
-            this.onPointerMove(t.clientX, t.clientY, t.identifier);
-          }
+        'pointermove',
+        (e: PointerEvent) => {
+          this.handleGestureMove(e.clientX, e.clientY, e.pointerId);
           e.preventDefault();
         },
         { passive: false }
       );
 
-      this.canvas.addEventListener('touchend', (e: TouchEvent) => {
-        if (this.dragStart) {
-          this.onPointerUp(this.dragStart.id);
+      const onPointerEnd = (e: PointerEvent) => {
+        try {
+          if (this.canvas.releasePointerCapture && this.canvas.hasPointerCapture?.(e.pointerId)) {
+            this.canvas.releasePointerCapture(e.pointerId);
+          }
+        } catch (_) {}
+        this.handleGestureEnd(e.clientX, e.clientY, e.pointerId);
+      };
+
+      this.canvas.addEventListener('pointerup', onPointerEnd, { passive: false });
+      this.canvas.addEventListener('pointercancel', onPointerEnd, { passive: false });
+    }
+
+    // 2. Touch Events Fallback (guarantees responsiveness on older WebView / mobile devices)
+    this.canvas.addEventListener(
+      'touchstart',
+      (e: TouchEvent) => {
+        if (e.touches.length > 0) {
+          const t = e.touches[0];
+          this.handleGestureStart(t.clientX, t.clientY, t.identifier);
+        }
+        e.preventDefault();
+      },
+      { passive: false }
+    );
+
+    this.canvas.addEventListener(
+      'touchmove',
+      (e: TouchEvent) => {
+        if (e.touches.length > 0) {
+          const t = e.touches[0];
+          this.handleGestureMove(t.clientX, t.clientY, t.identifier);
+        }
+        e.preventDefault();
+      },
+      { passive: false }
+    );
+
+    const onTouchEnd = (e: TouchEvent) => {
+      const id = this.dragStart ? this.dragStart.id : 0;
+      if (e.changedTouches && e.changedTouches.length > 0) {
+        const t = e.changedTouches[0];
+        this.handleGestureEnd(t.clientX, t.clientY, id);
+      } else {
+        this.handleGestureEnd(0, 0, id);
+      }
+    };
+
+    this.canvas.addEventListener('touchend', onTouchEnd, { passive: false });
+    this.canvas.addEventListener('touchcancel', onTouchEnd, { passive: false });
+
+    // 3. Window safety net: release drag if user lifts finger outside canvas
+    if (typeof window !== 'undefined') {
+      window.addEventListener('pointerup', (e: PointerEvent) => {
+        if (this.dragStart && this.dragStart.id === e.pointerId) {
+          this.handleGestureEnd(e.clientX, e.clientY, e.pointerId);
         }
       });
-
-      this.canvas.addEventListener('touchcancel', (e: TouchEvent) => {
+      window.addEventListener('touchend', () => {
         if (this.dragStart) {
-          this.onPointerUp(this.dragStart.id);
+          this.cancelDrag();
         }
       });
     }
@@ -102,25 +146,27 @@ export class InputHandler {
 
   private getRelativeCoordinates(clientX: number, clientY: number): { x: number; y: number } {
     const rect = this.canvas.getBoundingClientRect();
-    const width = this.canvas.clientWidth || rect.width || 1;
-    const height = this.canvas.clientHeight || rect.height || 1;
-    const scaleX = rect.width > 0 ? width / rect.width : 1;
-    const scaleY = rect.height > 0 ? height / rect.height : 1;
-
     return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY
+      x: clientX - rect.left,
+      y: clientY - rect.top
     };
   }
 
-  private onPointerDown(clientX: number, clientY: number, id: number | string): void {
+  private handleGestureStart(clientX: number, clientY: number, id: number | string): void {
     if (this.isLocked) return;
+
+    // Safety watchdog: reset after 3s if gesture somehow hangs
+    if (this.watchdogTimer) clearTimeout(this.watchdogTimer);
+    this.watchdogTimer = setTimeout(() => {
+      if (this.dragStart) {
+        this.cancelDrag();
+      }
+    }, 3000);
 
     const pos = this.getRelativeCoordinates(clientX, clientY);
     const cell = this.renderer.getCellCoordinatesFromPixel(pos.x, pos.y);
     if (!cell) {
-      this.renderer.setSelectedCoordinate(null);
-      this.dragStart = null;
+      this.cancelDrag();
       return;
     }
 
@@ -130,9 +176,8 @@ export class InputHandler {
       const isAdj = this.areAdjacent(prevSelected, cell);
       if (isAdj) {
         // Tap on adjacent cell: trigger swap immediately!
-        this.renderer.setSelectedCoordinate(null);
-        this.dragStart = null;
-        this.onSwap(prevSelected, cell);
+        this.cancelDrag();
+        this.executeSwap(prevSelected, cell);
         return;
       }
     }
@@ -147,7 +192,7 @@ export class InputHandler {
     };
   }
 
-  private onPointerMove(clientX: number, clientY: number, id: number | string): void {
+  private handleGestureMove(clientX: number, clientY: number, id: number | string): void {
     if (this.isLocked || !this.dragStart) return;
     if (id !== this.dragStart.id) return;
 
@@ -174,18 +219,37 @@ export class InputHandler {
         const from = { ...this.dragStart.cell };
         const to = { row: targetRow, col: targetCol };
 
-        // Clear selection & start state to prevent double fires
-        this.dragStart = null;
-        this.renderer.setSelectedCoordinate(null);
-        this.onSwap(from, to);
+        this.cancelDrag();
+        this.executeSwap(from, to);
       }
     }
   }
 
-  private onPointerUp(id: number | string): void {
+  private handleGestureEnd(clientX: number, clientY: number, id: number | string): void {
+    if (this.watchdogTimer) {
+      clearTimeout(this.watchdogTimer);
+      this.watchdogTimer = null;
+    }
+
     if (this.dragStart && this.dragStart.id === id) {
+      // Check if tap released on an adjacent cell
+      if (clientX > 0 && clientY > 0) {
+        const pos = this.getRelativeCoordinates(clientX, clientY);
+        const cell = this.renderer.getCellCoordinatesFromPixel(pos.x, pos.y);
+        const prev = this.renderer.getSelectedCoordinate();
+        if (cell && prev && this.areAdjacent(prev, cell)) {
+          this.cancelDrag();
+          this.executeSwap(prev, cell);
+          return;
+        }
+      }
       this.dragStart = null;
     }
+  }
+
+  private executeSwap(from: Coordinate, to: Coordinate): void {
+    this.setLocked(true);
+    this.onSwap(from, to);
   }
 
   public areAdjacent(c1: Coordinate, c2: Coordinate): boolean {

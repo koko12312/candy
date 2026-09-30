@@ -192,6 +192,7 @@ export interface GameStartPayload {
   targetScore: number;
   turnExpiresAt: number;
   turnDurationMs: number;
+  serverTimestamp?: number;
 }
 
 export interface ProposeMovePayload {
@@ -239,6 +240,7 @@ export interface LevelUpPayload {
   newTargetScore: number;
   newBoard: Tile[][];
   events: EngineEvent[];
+  round?: number;
 }
 
 export interface GameOverPayload {

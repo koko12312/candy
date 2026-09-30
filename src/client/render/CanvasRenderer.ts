@@ -374,6 +374,15 @@ export class CanvasRenderer {
             // If a special candy was formed at anchor
             if (ev.spawnSpecial) {
               const sp = ev.spawnSpecial;
+              if (sp.type === 'color_bomb') {
+                this.spawnPraiseText('TASTY!', '#ffd000');
+                this.soundCallback?.('tasty');
+              } else if (sp.type === 'wrapped') {
+                this.spawnPraiseText('SWEET!', '#ff4097');
+                this.soundCallback?.('sweet');
+              } else {
+                this.spawnPraiseText('NICE!', '#00e5ff');
+              }
               const center = this.getCellCenterPixel(sp.row, sp.col);
               this.particles.spawnSparkles(center.x, center.y, 14);
               const newVis: TileVisual = {
@@ -406,6 +415,7 @@ export class CanvasRenderer {
 
             if (ev.specialType === 'striped_h') {
               this.soundCallback?.('laser');
+              this.spawnPraiseText('STRIPED!', '#00e5ff');
               this.particles.spawnLaserSweep(
                 this.boardOffsetX,
                 originCenter.y,
@@ -415,6 +425,7 @@ export class CanvasRenderer {
               );
             } else if (ev.specialType === 'striped_v') {
               this.soundCallback?.('laser');
+              this.spawnPraiseText('STRIPED!', '#00e5ff');
               this.particles.spawnLaserSweep(
                 originCenter.x,
                 this.boardOffsetY,
@@ -424,18 +435,25 @@ export class CanvasRenderer {
               );
             } else if (ev.specialType === 'wrapped') {
               this.soundCallback?.('wrapped');
+              this.spawnPraiseText('WRAPPED!', '#ff4097');
               this.particles.spawnShockwave(originCenter.x, originCenter.y, 160, 'rgba(255, 64, 129, 0.9)');
-            } else if (ev.specialType === 'color_bomb' || ev.specialType === 'combo') {
+            } else if (ev.specialType === 'color_bomb') {
               this.soundCallback?.('bomb');
+              this.spawnPraiseText('COLOR BOMB!', '#ffd000');
               this.particles.spawnShockwave(originCenter.x, originCenter.y, 220, 'rgba(255, 215, 0, 0.95)');
+            } else if (ev.specialType === 'combo') {
+              this.soundCallback?.('bomb');
+              this.spawnPraiseText('DIVINE!', '#ff007f');
+              this.particles.spawnShockwave(originCenter.x, originCenter.y, 280, 'rgba(255, 0, 127, 0.95)');
             }
 
-            // Remove destroyed tiles
-            for (const t of ev.clearedTiles) {
+            // Remove destroyed tiles safely using affectedTiles or clearedTiles fallback
+            const destroyedList = (ev as any).affectedTiles || (ev as any).clearedTiles || [];
+            for (const t of destroyedList) {
               const visual = this.boardTiles.get(t.id);
               if (visual) {
                 const center = this.getCellCenterPixel(visual.row, visual.col);
-                this.particles.spawnCandyShatter(center.x, center.y, visual.color, 15);
+                this.particles.spawnCandyShatter(center.x, center.y, visual.color, 16);
                 visual.scale = 0;
                 visual.alpha = 0;
                 this.boardTiles.delete(visual.id);
@@ -445,65 +463,76 @@ export class CanvasRenderer {
               }
             }
 
-            await this.delay(220);
+            // Generous breathing room so explosions and shockwaves are fully visible
+            await this.delay(360);
             break;
           }
 
-          case 'TILES_FALL': {
+          case 'GRAVITY_DROP': {
             const dur = 280;
-            const drops = ev.drops;
-
-            for (const drop of drops) {
-              let visual = this.boardTiles.get(drop.id);
-              if (!visual) {
-                // Spawn new falling candy from above the board
-                const startX = this.boardOffsetX + drop.toCol * this.cellSize;
-                const startY = this.boardOffsetY + (drop.fromRow - GRID_ROWS) * this.cellSize;
-
-                visual = {
-                  id: drop.id,
-                  row: drop.toRow,
-                  col: drop.toCol,
-                  color: drop.color,
-                  type: drop.type,
-                  x: startX,
-                  y: startY,
-                  targetX: this.boardOffsetX + drop.toCol * this.cellSize,
-                  targetY: this.boardOffsetY + drop.toRow * this.cellSize,
-                  scale: 1.0,
-                  alpha: 1.0,
-                  rotation: 0,
-                  animTime: 0,
-                  animDuration: dur,
-                  easing: 'easeDrop'
-                };
-                this.boardTiles.set(drop.id, visual);
-              } else {
-                // Existing tile dropping down
+            for (const drop of ev.drops) {
+              const visual = this.boardTiles.get(drop.id);
+              if (visual) {
                 visual.row = drop.toRow;
-                visual.col = drop.toCol;
-                visual.targetX = this.boardOffsetX + drop.toCol * this.cellSize;
+                visual.col = drop.col;
+                visual.targetX = this.boardOffsetX + drop.col * this.cellSize;
                 visual.targetY = this.boardOffsetY + drop.toRow * this.cellSize;
                 visual.animTime = 0;
                 visual.animDuration = dur;
                 visual.easing = 'easeDrop';
+                this.gridMatrix[drop.toRow][drop.col] = visual;
               }
-              this.gridMatrix[drop.toRow][drop.toCol] = visual;
             }
 
-            await this.delay(dur + 40);
+            const nextEv = events[i + 1];
+            if (!nextEv || (nextEv as any).type !== 'REFILL_SPAWN') {
+              await this.delay(dur + 40);
+            }
             break;
           }
 
-          case 'COMBO_PRAISE': {
+          case 'REFILL_SPAWN': {
+            const dur = 280;
+            for (const spawn of ev.spawns) {
+              const startX = this.boardOffsetX + spawn.col * this.cellSize;
+              const startY = this.boardOffsetY + (spawn.row - GRID_ROWS) * this.cellSize;
+              const visual: TileVisual = {
+                id: spawn.id,
+                row: spawn.row,
+                col: spawn.col,
+                color: spawn.color,
+                type: spawn.type,
+                x: startX,
+                y: startY,
+                targetX: this.boardOffsetX + spawn.col * this.cellSize,
+                targetY: this.boardOffsetY + spawn.row * this.cellSize,
+                scale: 1.0,
+                alpha: 1.0,
+                rotation: 0,
+                animTime: 0,
+                animDuration: dur,
+                easing: 'easeDrop'
+              };
+              this.boardTiles.set(spawn.id, visual);
+              this.gridMatrix[spawn.row][spawn.col] = visual;
+            }
+
+            await this.delay(dur + 50);
+            break;
+          }
+
+          case 'CASCADE_STEP_COMPLETE': {
             if (ev.step === 2) {
               this.spawnPraiseText('SWEET!', '#ffd000');
               this.soundCallback?.('sweet');
             } else if (ev.step === 3) {
               this.spawnPraiseText('TASTY!', '#ff4097');
               this.soundCallback?.('tasty');
-            } else if (ev.step >= 4) {
+            } else if (ev.step === 4) {
               this.spawnPraiseText('DELICIOUS!', '#00e5ff');
+              this.soundCallback?.('delicious');
+            } else if (ev.step >= 5) {
+              this.spawnPraiseText('DIVINE!', '#ff007f');
               this.soundCallback?.('delicious');
             }
             break;
