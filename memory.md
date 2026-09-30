@@ -16,9 +16,10 @@
 
 ## Key Fixes & Milestones
 - **Level Progression Overhaul**:
-  - Implemented progressive target score thresholding in `GameSession.ts` (`targetScore += (level * 2000) + 1000`).
+  - Implemented dynamic target score thresholding in `GameSession.ts` (`while (totalScore >= this.targetScore)`) to handle multi-level leaps smoothly during high-combo cascades.
   - Added round replenishment on level up (`round = 1`) so moves reset and players can progress to higher levels instead of hitting an arbitrary game over.
   - Updated client `handleLevelUp` in `main.ts` to sync `currentRound`, refresh the HUD goal progress bar, trigger the level-up celebration overlay, and play the fanfare.
+  - Deployed the authoritative backend live to Render (`srv-damj9n942hec739b8cf0`, deploy `dep-dau891093c1s73d566p0`), resolving the stale production server instance (which had been frozen on an un-progressed commit from September 18) so level up and score progression now execute seamlessly in online play.
 
 ## Global Rules & Directives
 - **Rule 6 (Strict Edit Scope & Non-Destructive Changes)**:
