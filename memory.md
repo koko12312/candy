@@ -14,6 +14,12 @@
   - Permanent debug keystore located at `android/app/matchpop-debug.keystore` with fixed credentials (`matchpop123`, alias `matchpop`) configured in `android/app/build.gradle`.
   - Cached keystore in GitHub Actions (`.github/workflows/build-apk.yml`) to ensure every APK build is signed with the identical key and installs seamlessly over existing versions without package conflicts.
 
+## Key Fixes & Milestones
+- **Level Progression Overhaul**:
+  - Implemented progressive target score thresholding in `GameSession.ts` (`targetScore += (level * 2000) + 1000`).
+  - Added round replenishment on level up (`round = 1`) so moves reset and players can progress to higher levels instead of hitting an arbitrary game over.
+  - Updated client `handleLevelUp` in `main.ts` to sync `currentRound`, refresh the HUD goal progress bar, trigger the level-up celebration overlay, and play the fanfare.
+
 ## Global Rules & Directives
 - **Rule 6 (Strict Edit Scope & Non-Destructive Changes)**:
   - Fix and edit strictly and exactly what LO specifies.

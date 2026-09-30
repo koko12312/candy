@@ -329,8 +329,9 @@ export class GameSession {
         if (totalScore >= this.targetScore) {
           // Level Up!
           this.level++;
-          this.targetScore = this.targetScore + (this.level * 2000);
-          this.round = 1;
+          // Progressive target score (e.g. L1: 2000, L2: 5000, L3: 9000, etc.)
+          this.targetScore = this.targetScore + (this.level * 2000) + 1000;
+          this.round = 1; // Fresh rounds for the new level
           this.room.level = this.level;
           this.room.targetScore = this.targetScore;
           this.room.currentRound = this.round;
@@ -342,10 +343,10 @@ export class GameSession {
             newLevel: this.level,
             newTargetScore: this.targetScore,
             newBoard: Match3Engine.cloneBoard(this.board),
-            events: reshuffled.events
+            events: reshuffled.events,
+            round: this.round
           });
           
-          // Re-start turn countdown without advancing player, or advance? Let's just advance.
           this.advanceTurn();
           this.room.currentRound = this.round;
           const nextP = this.getCurrentPlayer();

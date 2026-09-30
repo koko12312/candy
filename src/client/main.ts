@@ -38,7 +38,6 @@ export class MatchPopApp {
   private hud: HUD;
 
   private gameState: 'LOBBY' | 'IN_GAME' | 'GAME_OVER' = 'LOBBY';
-  private localPlayerId = '';
   private currentBoard: Tile[][] = [];
   private currentPlayers: PlayerDTO[] = [];
   private activePlayerId = '';
@@ -108,7 +107,6 @@ export class MatchPopApp {
         this.audio.unlock();
         this.network.saveProfile(name, avatarId);
         const res = await this.network.createRoom({ playerName: name, avatarId, isPublic: true });
-        this.localPlayerId = res.playerId;
         this.lobbyUI.setLocalPlayerId(res.playerId);
         this.hud.setLocalPlayerId(res.playerId);
         this.lobbyUI.setWaitingMode(true, res.roomCode);
@@ -118,7 +116,6 @@ export class MatchPopApp {
         this.audio.unlock();
         this.network.saveProfile(name, avatarId);
         const res = await this.network.joinRoom({ roomCode, playerName: name, avatarId });
-        this.localPlayerId = res.playerId;
         this.lobbyUI.setLocalPlayerId(res.playerId);
         this.hud.setLocalPlayerId(res.playerId);
         this.lobbyUI.setWaitingMode(true, res.roomCode);
@@ -224,8 +221,7 @@ export class MatchPopApp {
 
   private handlePlayerSwap(from: Coordinate, to: Coordinate): void {
     if (this.gameState !== 'IN_GAME') return;
-    const myId = this.network.getPlayerId() || this.localPlayerId;
-    if (myId && this.activePlayerId && myId !== this.activePlayerId) return;
+    if (this.network.getPlayerId() !== this.activePlayerId) return;
 
     this.input.setLocked(true);
     if (this.moveTimeout) clearTimeout(this.moveTimeout);
@@ -241,7 +237,6 @@ export class MatchPopApp {
     this.currentPlayers = state.players;
     const pid = this.network.getPlayerId();
     if (pid) {
-      this.localPlayerId = pid;
       this.lobbyUI.setLocalPlayerId(pid);
       this.hud.setLocalPlayerId(pid);
     }
@@ -382,6 +377,9 @@ export class MatchPopApp {
   private handleLevelUp(payload: import('../shared/types').LevelUpPayload): void {
     this.currentLevel = payload.newLevel;
     this.currentTargetScore = payload.newTargetScore;
+    if (payload.round !== undefined) {
+      this.currentRound = payload.round;
+    }
     this.currentBoard = payload.newBoard;
     this.renderer.setBoard(payload.newBoard);
     
@@ -449,15 +447,7 @@ export class MatchPopApp {
       this.input.setLocked(true);
       return;
     }
-    const myId = this.network.getPlayerId() || this.localPlayerId;
-    let isMyTurn = false;
-    if (myId && this.activePlayerId) {
-      isMyTurn = myId === this.activePlayerId;
-    } else {
-      // Fallback: check if local slot matches activeSlot
-      const mySlot = this.network.getSlot();
-      isMyTurn = mySlot >= 0 && mySlot === this.activeSlot;
-    }
+    const isMyTurn = this.network.getPlayerId() === this.activePlayerId;
     this.input.setLocked(!isMyTurn);
   }
 
