@@ -327,10 +327,12 @@ export class GameSession {
         const totalScore = this.room.players.reduce((sum, p) => sum + p.score, 0);
 
         if (totalScore >= this.targetScore) {
-          // Level Up!
-          this.level++;
-          // Progressive target score (e.g. L1: 2000, L2: 5000, L3: 9000, etc.)
-          this.targetScore = this.targetScore + (this.level * 2000) + 1000;
+          // Level Up! Advance levels dynamically if a massive combo clears multiple targets
+          while (totalScore >= this.targetScore) {
+            this.level++;
+            // Progressive target score (e.g. L1: 2000, L2: 5000, L3: 9000, etc.)
+            this.targetScore = this.targetScore + (this.level * 2000) + 1000;
+          }
           this.round = 1; // Fresh rounds for the new level
           this.room.level = this.level;
           this.room.targetScore = this.targetScore;
