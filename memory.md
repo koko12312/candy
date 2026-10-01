@@ -26,7 +26,9 @@
   - Implemented Falling Ingredients (Cherries and Chestnuts) spawning in refills on Level 2+, dropping via gravity, and collecting at the bottom row with collection counter tracking (`ingredientsCollected` / `ingredientsTarget`).
   - Balanced multiplayer move count in `GameSession.ts` by counting every individual player move toward the shared move pool (`this.round++`), preventing multiple players from multiplying moves.
   - Added Swedish Fish, Cherry, and Chestnut procedural vector sprites to `TextureSynthesizer.ts`, animated fish swimming in `CanvasRenderer.ts`, and updated HUD in `HUD.ts` and `index.html` with the ingredient goal indicator (`🍒 collected/target`).
-  - Built production bundle v1.0.15 and verified all 121 unit tests pass.
+  - Built production bundle v1.0.17 and deployed live to Render (`srv-damj9n942hec739b8cf0`, commit `8a6b376`).
+  - Added automated public GitHub Releases publishing to `.github/workflows/build-apk.yml` via `softprops/action-gh-release@v2`. Every build now creates a public release under tag `vX.X.X` so anyone without a GitHub account can download the APK with a single direct link without signing in.
+  - All 121 unit tests passing.
 
 ## Global Rules & Directives
 - **Rule 5 (Mandatory Real-Time Memory Updating)**:
