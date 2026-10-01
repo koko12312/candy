@@ -304,7 +304,7 @@ export class CanvasRenderer {
 
     this.soundCallback?.('whoosh');
 
-    const dur = 200;
+    const dur = 140;
     const xA = this.boardOffsetX + from.col * this.cellSize;
     const yA = this.boardOffsetY + from.row * this.cellSize;
     const xB = this.boardOffsetX + to.col * this.cellSize;
@@ -460,11 +460,15 @@ export class CanvasRenderer {
               this.particles.spawnShockwave(originCenter.x, originCenter.y, 280, 'rgba(255, 0, 127, 0.95)');
             }
 
-            // Remove destroyed tiles safely using affectedTiles or clearedTiles fallback
+            // Remove destroyed tiles safely using affectedTiles or clearedTiles fallback (ingredients are never destroyed)
             const destroyedList = (ev as any).affectedTiles || (ev as any).clearedTiles || [];
             for (const t of destroyedList) {
               const visual = this.boardTiles.get(t.id);
-              if (visual) {
+              if (
+                visual &&
+                visual.type !== 'cherry' &&
+                visual.type !== 'chestnut'
+              ) {
                 const center = this.getCellCenterPixel(visual.row, visual.col);
                 this.particles.spawnCandyShatter(center.x, center.y, visual.color, 16);
                 visual.scale = 0;
@@ -476,8 +480,8 @@ export class CanvasRenderer {
               }
             }
 
-            // Generous breathing room so explosions and shockwaves are fully visible
-            await this.delay(360);
+            // Quick breathing room so explosions and shockwaves are visible without lag
+            await this.delay(220);
             break;
           }
 
@@ -505,11 +509,11 @@ export class CanvasRenderer {
               controlY: midY + perpY * arcOffset,
               color: ev.fishColor,
               time: 0,
-              duration: 0.42
+              duration: 0.28
             };
 
             this.activeFishSwims.push(fishSwim);
-            await this.delay(420);
+            await this.delay(280);
 
             // Splash on impact at target
             this.soundCallback?.('pop');
@@ -525,7 +529,7 @@ export class CanvasRenderer {
             const center = this.getCellCenterPixel(ev.coord.row, ev.coord.col);
             this.particles.spawnShockwave(center.x, center.y, 100, '#ffd000');
             this.particles.spawnSparkles(center.x, center.y, 16);
-            await this.delay(240);
+            await this.delay(160);
             break;
           }
 

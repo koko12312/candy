@@ -20,18 +20,14 @@
   - Added leftover turns carry-over on level up (`room.settings.maxRounds = baseMaxRounds + leftoverRounds`), preserving every remaining move from the previous round so players don't lose leftover turns when beating a level early.
   - Updated client `handleLevelUp` and `handleTurnChange` in `main.ts` to sync `currentRound` and `maxRounds`, refreshing the HUD goal progress bar, triggering the level-up celebration overlay, and playing the fanfare.
   - Deployed the authoritative backend live to Render (`srv-damj9n942hec739b8cf0`), ensuring that the production server in the cloud is always synchronized with code changes. Every change affecting game logic is pushed and deployed to Render immediately.
-- **Swedish Fish Candy, Falling Ingredients & Multiplayer Move Balancing**:
-  - Implemented 2x2 Swedish Fish Candy formation in `MatchDetector.ts` and `SpecialCandyHandler.ts`. Fixed 2x2 square match detection by removing premature early exit in `MatchDetector.detectMatches`. Added 2x2 square forbidden check in `Match3Engine.createInitialBoard` to guarantee clean initial boards with 0 pre-existing matches.
-  - Implemented authentic Candy Crush Swedish Fish special combinations (Fish + Fish spawns 3 swimming fish, Fish + Striped creates a swimming striped rocket, Fish + Wrapped creates a swimming detonator, Fish + Color Bomb spawns 3 fish of the matching color).
-  - Implemented Falling Ingredients (Cherries and Chestnuts) spawning in refills on Level 2+, dropping via gravity, and collecting at the bottom row with collection counter tracking (`ingredientsCollected` / `ingredientsTarget`).
-  - Balanced multiplayer move count in `GameSession.ts`:
-    - Base rounds scale dynamically by connected player count (`baseMaxRounds = 10 * connectedPlayers.length`), giving 10 moves for 1 player, 20 moves for 2 players, 30 for 3, and 40 for 4.
-    - Every move decrements 1 move from the shared pool (`this.round++`).
-    - Leveling up preserves all leftover moves from the previous level and adds fresh base rounds (`room.settings.maxRounds = baseMaxRounds + leftoverRounds`, `round = 1`).
-    - Synchronized `maxRounds` through `GameStartPayload` and `onTurnChange` so the client HUD accurately displays `ROUND 1 / 20` for 2 players immediately.
-  - Added Swedish Fish, Cherry, and Chestnut procedural vector sprites to `TextureSynthesizer.ts`, animated fish swimming in `CanvasRenderer.ts`, and updated HUD in `HUD.ts` and `index.html` with the ingredient goal indicator (`🍒 collected/target`).
-  - Added automated public GitHub Releases publishing to `.github/workflows/build-apk.yml` via `softprops/action-gh-release@v2`. Every build creates a public release under tag `vX.X.X` so anyone without a GitHub account can download the APK with a single direct link without signing in.
-  - Built production bundle v1.0.19 and verified all 122 unit tests pass.
+- **Gameplay Balancing, Indestructible Ingredients & Multiplayer Latency Overhaul**:
+  - **Full Rematch Clean Reset**: Fixed cross-game move pollution by ensuring `Room.resetToLobby()` resets `settings.maxRounds = 10` and `GameSession.start()` always derives starting moves cleanly as `10 * connectedPlayers.length`.
+  - **Indestructible Ingredients**: Cherry and Chestnut tiles are completely protected in `SpecialCandyHandler.ts`, `Match3Engine.ts`, and `GravityCascade.ts`. Striped lasers, wrapped bombs, color bombs, and fish will never destroy or nullify ingredients; ingredients only clear when collected at row 8.
+  - **Alternating Collection Feature (Max 5)**: Ingredients only appear on even levels (Level 2: 2 items, Level 4: 3 items, Level 6: 4 items, Level 8+: 5 items max). Odd levels (Level 1, 3, 5...) are pure match-and-score levels with zero ingredients spawning.
+  - **Score Progress Bar Calibration**: Level up target score is computed relative to the current team score (`totalScore + (level * 2000) + 1000`), ensuring that the new level starts with a fresh empty progress bar even after high-scoring cascades.
+  - **Multiplayer Responsiveness & Optimistic Swap**: Implemented instant client-side optimistic visual swapping in `main.ts` so the active player's screen immediately slides tiles under their fingers without waiting for network round-trip packets. Streamlined animation delays across `CanvasRenderer.ts` and `GameSession.ts` for snappy, simultaneous multiplayer pacing.
+  - **Public GitHub Releases**: Configured automated GitHub Release publishing (`v1.0.20`) for direct 1-click APK download without requiring a GitHub account.
+  - All 122 unit tests passing.
 
 ## Global Rules & Directives
 - **Rule 5 (Mandatory Real-Time Memory Updating)**:

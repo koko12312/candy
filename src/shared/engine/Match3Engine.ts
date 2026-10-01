@@ -53,22 +53,13 @@ export class Match3Engine {
       for (let r = 0; r < rows; r++) {
         const row: Tile[] = [];
         for (let c = 0; c < cols; c++) {
-          // Exclude colors that would immediately form a 3-match with neighbors to left or above,
-          // or a 2x2 square with top-left neighbors
+          // Exclude colors that would immediately form a 3-match with neighbors to left or above
           const forbiddenColors = new Set<CandyColor>();
           if (c >= 2 && row[c - 1].color === row[c - 2].color) {
             forbiddenColors.add(row[c - 1].color);
           }
           if (r >= 2 && board[r - 1][c].color === board[r - 2][c].color) {
             forbiddenColors.add(board[r - 1][c].color);
-          }
-          if (
-            r >= 1 &&
-            c >= 1 &&
-            board[r - 1][c].color === row[c - 1].color &&
-            board[r - 1][c - 1].color === row[c - 1].color
-          ) {
-            forbiddenColors.add(row[c - 1].color);
           }
 
           const validColors: CandyColor[] = [];
@@ -90,8 +81,8 @@ export class Match3Engine {
         board.push(row);
       }
 
-      // Check if board has at least one valid move
-      if (this.hasValidMoves(board)) {
+      // Check if board has 0 pre-existing matches (including 2x2 squares) and at least one valid move
+      if (MatchDetector.detectMatches(board).length === 0 && this.hasValidMoves(board)) {
         return board;
       }
     }
@@ -274,8 +265,16 @@ export class Match3Engine {
       turnScore += comboResult.score;
       events.push(...comboResult.events);
 
-      // Clear affected cells from board
+      // Clear affected cells from board (ingredients are never destroyed by combos)
       for (const coord of comboResult.affectedCoords) {
+        const t = workingBoard[coord.row][coord.col];
+        if (
+          t &&
+          (t.type === CandyType.INGREDIENT_CHERRY ||
+            t.type === CandyType.INGREDIENT_CHESTNUT)
+        ) {
+          continue;
+        }
         workingBoard[coord.row][coord.col] = null;
       }
 

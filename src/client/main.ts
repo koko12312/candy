@@ -43,6 +43,7 @@ export class MatchPopApp {
   private activePlayerId = '';
   private activeSlot = 0;
   private isCascadeAnimating = false;
+  private hasPendingOptimisticSwap = false;
   private settledCount = 0;
   private cascadeSettledCallbacks: (() => void)[] = [];
   
@@ -232,6 +233,10 @@ export class MatchPopApp {
         this.updateInputLockState();
       }
     }, 4000);
+
+    // Instant local optimistic visual swap so the active player's screen reacts immediately
+    this.hasPendingOptimisticSwap = true;
+    this.renderer.animateSwap(from, to, false);
     this.network.sendMove(from, to);
   }
 
@@ -349,13 +354,23 @@ export class MatchPopApp {
     }
 
     try {
+      let eventsToPlay = payload.events;
+      if (this.hasPendingOptimisticSwap) {
+        this.hasPendingOptimisticSwap = false;
+        // The first SWAP was already animated optimistically locally; skip re-animating it
+        if (payload.valid && eventsToPlay.length > 0 && eventsToPlay[0].type === 'SWAP') {
+          eventsToPlay = eventsToPlay.slice(1);
+        }
+      }
+
       // Play visual animations
-      await this.renderer.playEventsPipeline(payload.events, payload.boardAfterSettled);
+      await this.renderer.playEventsPipeline(eventsToPlay, payload.boardAfterSettled);
       this.currentBoard = payload.boardAfterSettled;
     } catch (err) {
       console.error('[Main] Error playing events pipeline:', err);
     } finally {
       this.isCascadeAnimating = false;
+      this.hasPendingOptimisticSwap = false;
       this.updateInputLockState();
     }
   }
