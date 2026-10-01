@@ -294,6 +294,67 @@ export class MatchDetector {
       }
     });
 
+    // Priority 3.5: 2x2 squares (Swedish Fish)
+    const usedCoords = new Set<string>();
+    for (const cl of clusters) {
+      for (const t of cl.tiles) {
+        usedCoords.add(`${t.row},${t.col}`);
+      }
+    }
+
+    const rows = board.length;
+    const cols = board[0].length;
+    for (let r = 0; r < rows - 1; r++) {
+      for (let c = 0; c < cols - 1; c++) {
+        const t00 = board[r][c];
+        const t01 = board[r][c + 1];
+        const t10 = board[r + 1][c];
+        const t11 = board[r + 1][c + 1];
+
+        if (
+          t00 && t01 && t10 && t11 &&
+          t00.color !== CandyColor.NONE &&
+          t00.color === t01.color &&
+          t00.color === t10.color &&
+          t00.color === t11.color &&
+          t00.type !== CandyType.INGREDIENT_CHERRY &&
+          t00.type !== CandyType.INGREDIENT_CHESTNUT &&
+          t01.type !== CandyType.INGREDIENT_CHERRY &&
+          t01.type !== CandyType.INGREDIENT_CHESTNUT &&
+          t10.type !== CandyType.INGREDIENT_CHERRY &&
+          t10.type !== CandyType.INGREDIENT_CHESTNUT &&
+          t11.type !== CandyType.INGREDIENT_CHERRY &&
+          t11.type !== CandyType.INGREDIENT_CHESTNUT
+        ) {
+          const sqCoords: Coordinate[] = [
+            { row: r, col: c },
+            { row: r, col: c + 1 },
+            { row: r + 1, col: c },
+            { row: r + 1, col: c + 1 }
+          ];
+
+          // Skip if any coordinate is already consumed by line5, t_l_cross, or line4
+          const alreadyUsed = sqCoords.some((coord) => usedCoords.has(`${coord.row},${coord.col}`));
+          if (alreadyUsed) continue;
+
+          sqCoords.forEach((coord) => usedCoords.add(`${coord.row},${coord.col}`));
+
+          let anchor = sqCoords.find((t) => isSwapped(t.row, t.col));
+          if (!anchor) {
+            anchor = sqCoords[0];
+          }
+
+          clusters.push({
+            color: t00.color,
+            tiles: sqCoords,
+            shape: 'square2x2',
+            anchor,
+            spawnType: CandyType.FISH
+          });
+        }
+      }
+    }
+
     // Priority 4: 3-in-a-line basic matches
     hRuns.forEach((hRun, hIdx) => {
       if (usedHRuns.has(hIdx)) return;

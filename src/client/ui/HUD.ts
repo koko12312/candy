@@ -25,6 +25,7 @@ export class HUD {
 
   private levelBadge: HTMLElement;
   private roundBadge: HTMLElement;
+  private ingredientBadge: HTMLElement | null;
   private scoreTargetText: HTMLElement;
   private scoreProgressFill: HTMLElement;
 
@@ -55,6 +56,7 @@ export class HUD {
 
     this.levelBadge = this.container.querySelector('#hud-level-badge') as HTMLElement;
     this.roundBadge = this.container.querySelector('#hud-round-badge') as HTMLElement;
+    this.ingredientBadge = this.container.querySelector('#hud-ingredient-badge') as HTMLElement | null;
     this.scoreTargetText = this.container.querySelector('#hud-score-target-text') as HTMLElement;
     this.scoreProgressFill = this.container.querySelector('#hud-score-progress-fill') as HTMLElement;
 
@@ -129,12 +131,28 @@ export class HUD {
     }, 2500);
   }
 
-  public updateLevel(level: number, currentTotalScore: number, targetScore: number, round = 1, maxRounds = 10): void {
+  public updateLevel(
+    level: number,
+    currentTotalScore: number,
+    targetScore: number,
+    round = 1,
+    maxRounds = 10,
+    ingredientsCollected = 0,
+    ingredientsTarget = 0
+  ): void {
     if (this.levelBadge) {
       this.levelBadge.textContent = `LEVEL ${level}`;
     }
     if (this.roundBadge) {
       this.roundBadge.textContent = `ROUND ${round}/${maxRounds}`;
+    }
+    if (this.ingredientBadge) {
+      if (ingredientsTarget > 0) {
+        this.ingredientBadge.classList.remove('hidden');
+        this.ingredientBadge.textContent = `🍒 ${ingredientsCollected}/${ingredientsTarget}`;
+      } else {
+        this.ingredientBadge.classList.add('hidden');
+      }
     }
     if (this.scoreTargetText) {
       this.scoreTargetText.textContent = `${currentTotalScore.toLocaleString()} / ${targetScore.toLocaleString()}`;

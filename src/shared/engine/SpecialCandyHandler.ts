@@ -39,6 +39,13 @@ export class SpecialCandyHandler {
     if (tileA.type === CandyType.COLOR_BOMB || tileB.type === CandyType.COLOR_BOMB) {
       return true;
     }
+    // Condition 3: Fish swapped with normal candy of same color activates fish
+    if (
+      (tileA.type === CandyType.FISH && tileB.type === CandyType.NORMAL && tileA.color === tileB.color) ||
+      (tileB.type === CandyType.FISH && tileA.type === CandyType.NORMAL && tileA.color === tileB.color)
+    ) {
+      return true;
+    }
     return false;
   }
 
@@ -492,11 +499,355 @@ export class SpecialCandyHandler {
       };
     }
 
+    // Case 8: Fish + Fish -> Spawns 3 fish swarming targets!
+    if (tileA.type === CandyType.FISH && tileB.type === CandyType.FISH) {
+      score += 2000;
+      addCoord(tileA.row, tileA.col);
+      addCoord(tileB.row, tileB.col);
+      const targets = this.findSmartTargets(board, 3, prng, new Set([tileA.id, tileB.id]));
+      const specialsToTrigger: Tile[] = [];
+
+      for (const tgt of targets) {
+        addCoord(tgt.row, tgt.col);
+        events.push({
+          type: 'FISH_SWIM',
+          from: swapOrigin,
+          target: { row: tgt.row, col: tgt.col },
+          fishColor: tileA.color
+        });
+        events.push({
+          type: 'SPECIAL_DETONATE',
+          specialType: CandyType.FISH,
+          origin: { row: tgt.row, col: tgt.col },
+          affectedTiles: [{ id: tgt.id, row: tgt.row, col: tgt.col }]
+        });
+        specialsToTrigger.push(tgt);
+      }
+
+      const secondaryResult = this.detonateTilesRecursive(
+        board,
+        specialsToTrigger,
+        prng,
+        new Set([tileA.id, tileB.id])
+      );
+      for (const coord of secondaryResult.affectedCoords) {
+        addCoord(coord.row, coord.col);
+      }
+      events.push(...secondaryResult.events);
+      return {
+        affectedCoords: Array.from(affectedMap.values()),
+        events,
+        score: score + secondaryResult.score
+      };
+    }
+
+    // Case 9: Fish + Striped -> Flying striped fish, detonates cross beam at target!
+    if (
+      (tileA.type === CandyType.FISH && (tileB.type === CandyType.STRIPED_HORIZONTAL || tileB.type === CandyType.STRIPED_VERTICAL)) ||
+      (tileB.type === CandyType.FISH && (tileA.type === CandyType.STRIPED_HORIZONTAL || tileA.type === CandyType.STRIPED_VERTICAL))
+    ) {
+      score += 1500;
+      addCoord(tileA.row, tileA.col);
+      addCoord(tileB.row, tileB.col);
+      const fishTile = tileA.type === CandyType.FISH ? tileA : tileB;
+      const targets = this.findSmartTargets(board, 1, prng, new Set([tileA.id, tileB.id]));
+      const specialsToTrigger: Tile[] = [];
+
+      if (targets.length > 0) {
+        const tgt = targets[0];
+        addCoord(tgt.row, tgt.col);
+        for (let c = 0; c < cols; c++) addCoord(tgt.row, c);
+        for (let r = 0; r < rows; r++) addCoord(r, tgt.col);
+
+        events.push({
+          type: 'FISH_SWIM',
+          from: swapOrigin,
+          target: { row: tgt.row, col: tgt.col },
+          fishColor: fishTile.color,
+          comboType: CandyType.STRIPED_HORIZONTAL
+        });
+        events.push({
+          type: 'SPECIAL_DETONATE',
+          specialType: 'combo',
+          origin: { row: tgt.row, col: tgt.col },
+          affectedTiles: Array.from(affectedMap.values()).map((coord) => ({
+            id: board[coord.row]?.[coord.col]?.id ?? 0,
+            row: coord.row,
+            col: coord.col
+          }))
+        });
+
+        affectedMap.forEach((coord) => {
+          const t = board[coord.row]?.[coord.col];
+          if (t && t.id !== tileA.id && t.id !== tileB.id && t.type !== CandyType.NORMAL) {
+            specialsToTrigger.push(t);
+          }
+        });
+      }
+
+      const secondaryResult = this.detonateTilesRecursive(
+        board,
+        specialsToTrigger,
+        prng,
+        new Set([tileA.id, tileB.id])
+      );
+      for (const coord of secondaryResult.affectedCoords) {
+        addCoord(coord.row, coord.col);
+      }
+      events.push(...secondaryResult.events);
+      return {
+        affectedCoords: Array.from(affectedMap.values()),
+        events,
+        score: score + secondaryResult.score
+      };
+    }
+
+    // Case 10: Fish + Wrapped -> Flying wrapped fish, detonates 3x3 at target!
+    if (
+      (tileA.type === CandyType.FISH && tileB.type === CandyType.WRAPPED) ||
+      (tileB.type === CandyType.FISH && tileA.type === CandyType.WRAPPED)
+    ) {
+      score += 1800;
+      addCoord(tileA.row, tileA.col);
+      addCoord(tileB.row, tileB.col);
+      const fishTile = tileA.type === CandyType.FISH ? tileA : tileB;
+      const targets = this.findSmartTargets(board, 1, prng, new Set([tileA.id, tileB.id]));
+      const specialsToTrigger: Tile[] = [];
+
+      if (targets.length > 0) {
+        const tgt = targets[0];
+        addCoord(tgt.row, tgt.col);
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            addCoord(tgt.row + dr, tgt.col + dc);
+          }
+        }
+
+        events.push({
+          type: 'FISH_SWIM',
+          from: swapOrigin,
+          target: { row: tgt.row, col: tgt.col },
+          fishColor: fishTile.color,
+          comboType: CandyType.WRAPPED
+        });
+        events.push({
+          type: 'SPECIAL_DETONATE',
+          specialType: CandyType.WRAPPED,
+          origin: { row: tgt.row, col: tgt.col },
+          affectedTiles: Array.from(affectedMap.values()).map((coord) => ({
+            id: board[coord.row]?.[coord.col]?.id ?? 0,
+            row: coord.row,
+            col: coord.col
+          }))
+        });
+
+        affectedMap.forEach((coord) => {
+          const t = board[coord.row]?.[coord.col];
+          if (t && t.id !== tileA.id && t.id !== tileB.id && t.type !== CandyType.NORMAL) {
+            specialsToTrigger.push(t);
+          }
+        });
+      }
+
+      const secondaryResult = this.detonateTilesRecursive(
+        board,
+        specialsToTrigger,
+        prng,
+        new Set([tileA.id, tileB.id])
+      );
+      for (const coord of secondaryResult.affectedCoords) {
+        addCoord(coord.row, coord.col);
+      }
+      events.push(...secondaryResult.events);
+      return {
+        affectedCoords: Array.from(affectedMap.values()),
+        events,
+        score: score + secondaryResult.score
+      };
+    }
+
+    // Case 11: Color Bomb + Fish -> All candies of fish color become Fish and swim!
+    if (
+      (tileA.type === CandyType.COLOR_BOMB && tileB.type === CandyType.FISH) ||
+      (tileB.type === CandyType.COLOR_BOMB && tileA.type === CandyType.FISH)
+    ) {
+      score += 2500;
+      addCoord(tileA.row, tileA.col);
+      addCoord(tileB.row, tileB.col);
+      const fishTile = tileA.type === CandyType.FISH ? tileA : tileB;
+      const targetColor = fishTile.color;
+
+      const convertedFish: Tile[] = [];
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const cand = board[r][c];
+          if (cand && cand.color === targetColor) {
+            cand.type = CandyType.FISH;
+            convertedFish.push(cand);
+            addCoord(r, c);
+          }
+        }
+      }
+
+      const targets = this.findSmartTargets(board, convertedFish.length, prng, new Set([tileA.id, tileB.id, ...convertedFish.map(f => f.id)]));
+      const specialsToTrigger: Tile[] = [];
+
+      targets.forEach((tgt, i) => {
+        const fromTile = convertedFish[i] || fishTile;
+        addCoord(tgt.row, tgt.col);
+        events.push({
+          type: 'FISH_SWIM',
+          from: { row: fromTile.row, col: fromTile.col },
+          target: { row: tgt.row, col: tgt.col },
+          fishColor: targetColor
+        });
+        events.push({
+          type: 'SPECIAL_DETONATE',
+          specialType: CandyType.FISH,
+          origin: { row: tgt.row, col: tgt.col },
+          affectedTiles: [{ id: tgt.id, row: tgt.row, col: tgt.col }]
+        });
+        specialsToTrigger.push(tgt);
+      });
+
+      const secondaryResult = this.detonateTilesRecursive(
+        board,
+        specialsToTrigger,
+        prng,
+        new Set([tileA.id, tileB.id, ...convertedFish.map(f => f.id)])
+      );
+      for (const coord of secondaryResult.affectedCoords) {
+        addCoord(coord.row, coord.col);
+      }
+      events.push(...secondaryResult.events);
+      return {
+        affectedCoords: Array.from(affectedMap.values()),
+        events,
+        score: score + secondaryResult.score
+      };
+    }
+
+    // Case 12: Fish + Normal (same color) -> Fish swims to a target!
+    if (
+      (tileA.type === CandyType.FISH && tileB.type === CandyType.NORMAL && tileA.color === tileB.color) ||
+      (tileB.type === CandyType.FISH && tileA.type === CandyType.NORMAL && tileA.color === tileB.color)
+    ) {
+      score += 1000;
+      addCoord(tileA.row, tileA.col);
+      addCoord(tileB.row, tileB.col);
+      const fishTile = tileA.type === CandyType.FISH ? tileA : tileB;
+      const targets = this.findSmartTargets(board, 1, prng, new Set([tileA.id, tileB.id]));
+      const specialsToTrigger: Tile[] = [];
+
+      if (targets.length > 0) {
+        const tgt = targets[0];
+        addCoord(tgt.row, tgt.col);
+        events.push({
+          type: 'FISH_SWIM',
+          from: swapOrigin,
+          target: { row: tgt.row, col: tgt.col },
+          fishColor: fishTile.color
+        });
+        events.push({
+          type: 'SPECIAL_DETONATE',
+          specialType: CandyType.FISH,
+          origin: { row: tgt.row, col: tgt.col },
+          affectedTiles: [{ id: tgt.id, row: tgt.row, col: tgt.col }]
+        });
+        specialsToTrigger.push(tgt);
+      }
+
+      const secondaryResult = this.detonateTilesRecursive(
+        board,
+        specialsToTrigger,
+        prng,
+        new Set([tileA.id, tileB.id])
+      );
+      for (const coord of secondaryResult.affectedCoords) {
+        addCoord(coord.row, coord.col);
+      }
+      events.push(...secondaryResult.events);
+      return {
+        affectedCoords: Array.from(affectedMap.values()),
+        events,
+        score: score + secondaryResult.score
+      };
+    }
+
     return {
       affectedCoords: [],
       events: [],
       score: 0
     };
+  }
+
+  /**
+   * Finds smart targets across the board for Swedish Fish homing.
+   */
+  public static findSmartTargets(
+    board: (Tile | null)[][],
+    count: number,
+    prng: PRNG,
+    excludeIds: Set<number>
+  ): Tile[] {
+    const rows = board.length;
+    const cols = board[0].length;
+    const targets: Tile[] = [];
+    const chosenIds = new Set<number>(excludeIds);
+
+    const candidateUnderIngredients: Tile[] = [];
+    const candidateSpecials: Tile[] = [];
+    const candidateNormals: Tile[] = [];
+
+    // Scan for candidates below ingredients first
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const ing = board[r][c];
+        if (ing && (ing.type === CandyType.INGREDIENT_CHERRY || ing.type === CandyType.INGREDIENT_CHESTNUT)) {
+          for (let belowR = r + 1; belowR < rows; belowR++) {
+            const under = board[belowR][c];
+            if (under && !chosenIds.has(under.id) && under.type !== CandyType.INGREDIENT_CHERRY && under.type !== CandyType.INGREDIENT_CHESTNUT) {
+              candidateUnderIngredients.push(under);
+            }
+          }
+        }
+      }
+    }
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const cand = board[r][c];
+        if (cand && !chosenIds.has(cand.id)) {
+          if (cand.type !== CandyType.NORMAL && cand.type !== CandyType.INGREDIENT_CHERRY && cand.type !== CandyType.INGREDIENT_CHESTNUT) {
+            candidateSpecials.push(cand);
+          } else if (cand.type !== CandyType.INGREDIENT_CHERRY && cand.type !== CandyType.INGREDIENT_CHESTNUT) {
+            candidateNormals.push(cand);
+          }
+        }
+      }
+    }
+
+    while (targets.length < count) {
+      let chosen: Tile | null = null;
+      if (candidateUnderIngredients.length > 0) {
+        chosen = candidateUnderIngredients.shift()!;
+      } else if (candidateSpecials.length > 0) {
+        const idx = prng.nextInt(0, candidateSpecials.length - 1);
+        chosen = candidateSpecials.splice(idx, 1)[0];
+      } else if (candidateNormals.length > 0) {
+        const idx = prng.nextInt(0, candidateNormals.length - 1);
+        chosen = candidateNormals.splice(idx, 1)[0];
+      } else {
+        break;
+      }
+
+      if (chosen && !chosenIds.has(chosen.id)) {
+        chosenIds.add(chosen.id);
+        targets.push(chosen);
+      }
+    }
+
+    return targets;
   }
 
   /**
@@ -641,6 +992,30 @@ export class SpecialCandyHandler {
           origin: { row: tile.row, col: tile.col },
           affectedTiles: colorBombAffected
         });
+      } else if (tile.type === CandyType.FISH) {
+        score += SCORE_WRAPPED_TILE;
+        const targets = this.findSmartTargets(board, 1, prng, visitedTileIds);
+        if (targets.length > 0) {
+          const bestTarget = targets[0];
+          markCoord(bestTarget.row, bestTarget.col);
+          if (!visitedTileIds.has(bestTarget.id)) {
+            queue.push(bestTarget);
+          }
+
+          events.push({
+            type: 'FISH_SWIM',
+            from: { row: tile.row, col: tile.col },
+            target: { row: bestTarget.row, col: bestTarget.col },
+            fishColor: tile.color
+          });
+
+          events.push({
+            type: 'SPECIAL_DETONATE',
+            specialType: CandyType.FISH,
+            origin: { row: bestTarget.row, col: bestTarget.col },
+            affectedTiles: [{ id: bestTarget.id, row: bestTarget.row, col: bestTarget.col }]
+          });
+        }
       }
     }
 

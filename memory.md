@@ -18,11 +18,19 @@
 - **Level Progression Overhaul & Turn Carry-Over**:
   - Implemented dynamic target score thresholding in `GameSession.ts` (`while (totalScore >= this.targetScore)`) to handle multi-level leaps smoothly during high-combo cascades.
   - Added leftover turns carry-over on level up (`room.settings.maxRounds = baseMaxRounds + leftoverRounds`), preserving every remaining move from the previous round so players don't lose leftover turns when beating a level early.
-  - Eliminated board resetting/reshuffling on level up in `GameSession.ts`. The settled board and special candies are completely preserved so players continue playing without interruption, only reshuffling if zero valid moves remain.
   - Updated client `handleLevelUp` and `handleTurnChange` in `main.ts` to sync `currentRound` and `maxRounds`, refreshing the HUD goal progress bar, triggering the level-up celebration overlay, and playing the fanfare.
   - Deployed the authoritative backend live to Render (`srv-damj9n942hec739b8cf0`), ensuring that the production server in the cloud is always synchronized with code changes. Every change affecting game logic is pushed and deployed to Render immediately.
+- **Swedish Fish Candy, Falling Ingredients & Multiplayer Move Balancing**:
+  - Implemented 2x2 Swedish Fish Candy formation in `MatchDetector.ts` and `SpecialCandyHandler.ts`. Swedish Fish swim with an animated curved trajectory and bubble trail to target high-priority tiles or candies under falling ingredients.
+  - Implemented authentic Candy Crush Swedish Fish special combinations (Fish + Fish spawns 3 swimming fish, Fish + Striped creates a swimming striped rocket, Fish + Wrapped creates a swimming detonator, Fish + Color Bomb spawns 3 fish of the matching color).
+  - Implemented Falling Ingredients (Cherries and Chestnuts) spawning in refills on Level 2+, dropping via gravity, and collecting at the bottom row with collection counter tracking (`ingredientsCollected` / `ingredientsTarget`).
+  - Balanced multiplayer move count in `GameSession.ts` by counting every individual player move toward the shared move pool (`this.round++`), preventing multiple players from multiplying moves.
+  - Added Swedish Fish, Cherry, and Chestnut procedural vector sprites to `TextureSynthesizer.ts`, animated fish swimming in `CanvasRenderer.ts`, and updated HUD in `HUD.ts` and `index.html` with the ingredient goal indicator (`🍒 collected/target`).
+  - Built production bundle v1.0.15 and verified all 121 unit tests pass.
 
 ## Global Rules & Directives
+- **Rule 5 (Mandatory Real-Time Memory Updating)**:
+  - Continuously update memory.md as the final action of every finished step.
 - **Rule 6 (Strict Edit Scope & Non-Destructive Changes)**:
   - Fix and edit strictly and exactly what LO specifies.
   - Never modify, redesign, refactor, remove, or revert unrelated features, UI elements, or functioning code.

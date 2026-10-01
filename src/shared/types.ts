@@ -18,7 +18,10 @@ export enum CandyType {
   STRIPED_HORIZONTAL = 'striped_h', // Clears its entire row
   STRIPED_VERTICAL = 'striped_v',     // Clears its entire column
   WRAPPED = 'wrapped',               // Explodes in a 3x3 area twice
-  COLOR_BOMB = 'color_bomb'          // Clears all candies of chosen color
+  COLOR_BOMB = 'color_bomb',         // Clears all candies of chosen color
+  FISH = 'fish',                     // Swedish Fish: 2x2 match, swims to target
+  INGREDIENT_CHERRY = 'cherry',      // Falling ingredient: cherry
+  INGREDIENT_CHESTNUT = 'chestnut'   // Falling ingredient: chestnut
 }
 
 export interface Coordinate {
@@ -31,7 +34,7 @@ export interface Tile {
   row: number;          // Current row (0..8)
   col: number;          // Current col (0..8)
   color: CandyColor;    // Color 0..5, or -1 for Color Bomb
-  type: CandyType;      // normal, striped_h, striped_v, wrapped, color_bomb
+  type: CandyType;      // normal, striped_h, striped_v, wrapped, color_bomb, fish, cherry, chestnut
 }
 
 export interface PlayerMove {
@@ -54,6 +57,20 @@ export type EngineEvent =
       specialType: CandyType | 'combo';
       origin: Coordinate;
       affectedTiles: { id: number; row: number; col: number }[];
+    }
+  | {
+      type: 'FISH_SWIM';
+      from: Coordinate;
+      target: Coordinate;
+      fishColor: CandyColor;
+      comboType?: CandyType;
+    }
+  | {
+      type: 'INGREDIENT_COLLECTED';
+      ingredientType: CandyType;
+      coord: Coordinate;
+      count: number;
+      targetCount: number;
     }
   | {
       type: 'GRAVITY_DROP';
@@ -106,7 +123,7 @@ export interface VerticalMatchRun {
 export interface MatchCluster {
   color: CandyColor;
   tiles: Coordinate[];
-  shape: 'line3' | 'line4' | 'line5' | 't_l_cross';
+  shape: 'line3' | 'line4' | 'line5' | 't_l_cross' | 'square2x2';
   anchor: Coordinate;
   spawnType?: CandyType;
 }
@@ -193,6 +210,8 @@ export interface GameStartPayload {
   turnExpiresAt: number;
   turnDurationMs: number;
   serverTimestamp?: number;
+  ingredientsCollected?: number;
+  ingredientsTarget?: number;
 }
 
 export interface ProposeMovePayload {
@@ -213,6 +232,8 @@ export interface MoveResultPayload {
   playerTotalScore: number;
   boardAfterSettled: Tile[][];
   needsReshuffle: boolean;
+  ingredientsCollected?: number;
+  ingredientsTarget?: number;
 }
 
 export interface TurnChangePayload {
@@ -223,6 +244,8 @@ export interface TurnChangePayload {
   turnDurationMs: number;
   serverTimestamp: number;
   maxRounds?: number;
+  ingredientsCollected?: number;
+  ingredientsTarget?: number;
 }
 
 export interface TurnTimeoutPayload {
@@ -243,6 +266,8 @@ export interface LevelUpPayload {
   events: EngineEvent[];
   round?: number;
   maxRounds?: number;
+  ingredientsCollected?: number;
+  ingredientsTarget?: number;
 }
 
 export interface GameOverPayload {
@@ -270,5 +295,7 @@ export interface GameSyncStatePayload {
   turnDurationMs: number;
   serverTimestamp: number;
   settings: RoomSettings;
+  ingredientsCollected?: number;
+  ingredientsTarget?: number;
 }
 

@@ -40,6 +40,8 @@ export class GameSession {
   public round = 1;
   public level = 1;
   public targetScore = 2000;
+  public ingredientsCollected = 0;
+  public ingredientsTarget = 0;
   public turnStartedAt = 0;
   public turnExpiresAt = 0;
   public turnDurationMs: number;
@@ -58,6 +60,7 @@ export class GameSession {
     this.prng = new PRNG(this.seed);
     this.turnDurationMs = (this.room.settings.turnDurationSeconds || 20) * 1000;
     this.baseMaxRounds = this.room.settings.maxRounds || 10;
+    this.ingredientsTarget = this.level >= 2 ? 2 : 0;
   }
 
   /**
@@ -107,7 +110,9 @@ export class GameSession {
       targetScore: this.targetScore,
       turnExpiresAt: this.turnExpiresAt,
       turnDurationMs: this.turnDurationMs,
-      serverTimestamp: Date.now()
+      serverTimestamp: Date.now(),
+      ingredientsCollected: this.ingredientsCollected,
+      ingredientsTarget: this.ingredientsTarget
     });
   }
 
@@ -165,7 +170,7 @@ export class GameSession {
       nextPlayerId: nextP ? nextP.playerId : ''
     });
 
-    if (wrapped && this.round > this.room.settings.maxRounds) {
+    if (this.round > this.room.settings.maxRounds) {
       this.triggerGameOver();
       return;
     }
@@ -247,8 +252,14 @@ export class GameSession {
     let scheduledAsync = false;
 
     try {
-      // Execute move via Match3Engine
-      const resolution = this.engine.resolveMove(this.board, { playerId, from, to }, this.prng);
+      // Execute move via Match3Engine with ingredient tracking
+      const ingContext = {
+        level: this.level,
+        collected: this.ingredientsCollected,
+        target: this.ingredientsTarget
+      };
+      const resolution = this.engine.resolveMove(this.board, { playerId, from, to }, this.prng, ingContext);
+      this.ingredientsCollected = ingContext.collected;
 
       if (!resolution.valid) {
         this.isEvaluatingMove = false;
@@ -269,7 +280,9 @@ export class GameSession {
           scoreAwarded: 0,
           playerTotalScore: currentP.score,
           boardAfterSettled: Match3Engine.cloneBoard(this.board),
-          needsReshuffle: false
+          needsReshuffle: false,
+          ingredientsCollected: this.ingredientsCollected,
+          ingredientsTarget: this.ingredientsTarget
         };
 
         this.callbacks.onMoveResult(resultPayload);
@@ -304,7 +317,9 @@ export class GameSession {
         scoreAwarded: resolution.turnScore,
         playerTotalScore: currentP.score,
         boardAfterSettled: Match3Engine.cloneBoard(this.board),
-        needsReshuffle
+        needsReshuffle,
+        ingredientsCollected: this.ingredientsCollected,
+        ingredientsTarget: this.ingredientsTarget
       };
 
       // Emit game:move_result immediately
@@ -328,17 +343,20 @@ export class GameSession {
 
         const totalScore = this.room.players.reduce((sum, p) => sum + p.score, 0);
 
-        if (totalScore >= this.targetScore) {
+        const levelConditionsMet =
+          totalScore >= this.targetScore &&
+          (this.ingredientsTarget === 0 || this.ingredientsCollected >= this.ingredientsTarget);
+
+        if (levelConditionsMet) {
           // Calculate leftover rounds from previous level to carry over as bonus turns
           const currentMaxRounds = this.room.settings.maxRounds || this.baseMaxRounds;
           const leftoverRounds = Math.max(0, currentMaxRounds - this.round);
 
-          // Level Up! Advance levels dynamically if a massive combo clears multiple targets
-          while (totalScore >= this.targetScore) {
-            this.level++;
-            // Progressive target score (e.g. L1: 2000, L2: 5000, L3: 9000, etc.)
-            this.targetScore = this.targetScore + (this.level * 2000) + 1000;
-          }
+          // Level Up! Advance levels dynamically
+          this.level++;
+          this.targetScore = this.targetScore + (this.level * 2000) + 1000;
+          this.ingredientsCollected = 0;
+          this.ingredientsTarget = this.level >= 2 ? 2 + (this.level - 2) : 0;
 
           // Full fresh moves for the new level PLUS any leftover turns carried over
           this.room.settings.maxRounds = this.baseMaxRounds + leftoverRounds;
@@ -366,7 +384,9 @@ export class GameSession {
             newBoard: Match3Engine.cloneBoard(this.board),
             events: levelUpEvents,
             round: this.round,
-            maxRounds: this.room.settings.maxRounds
+            maxRounds: this.room.settings.maxRounds,
+            ingredientsCollected: this.ingredientsCollected,
+            ingredientsTarget: this.ingredientsTarget
           });
           
           this.advanceTurn();
@@ -378,9 +398,9 @@ export class GameSession {
           return;
         }
 
-        const wrapped = this.advanceTurn();
+        this.advanceTurn();
         this.room.currentRound = this.round;
-        if (wrapped && this.round > this.room.settings.maxRounds) {
+        if (this.round > this.room.settings.maxRounds) {
           this.triggerGameOver();
           return;
         }
@@ -411,16 +431,17 @@ export class GameSession {
     // Find connected players with slot > current activeSlot
     const higherSlotPlayers = connected.filter((p) => p.slot > this.activeSlot);
 
-    let nextPlayer: RoomPlayer;
     let wrapped = false;
-
+    let nextPlayer: RoomPlayer;
     if (higherSlotPlayers.length > 0) {
       nextPlayer = higherSlotPlayers[0];
     } else {
       nextPlayer = connected[0];
       wrapped = true;
-      this.round++;
     }
+
+    // Every single player move decrements 1 move from the shared team move pool
+    this.round++;
 
     this.activePlayerId = nextPlayer.playerId;
     this.activeSlot = nextPlayer.slot;
@@ -444,7 +465,9 @@ export class GameSession {
       turnExpiresAt: this.turnExpiresAt,
       turnDurationMs: this.turnDurationMs,
       serverTimestamp: Date.now(),
-      maxRounds: this.room.settings.maxRounds
+      maxRounds: this.room.settings.maxRounds,
+      ingredientsCollected: this.ingredientsCollected,
+      ingredientsTarget: this.ingredientsTarget
     });
   }
 
@@ -508,7 +531,9 @@ export class GameSession {
     }
 
     const totalScore = this.room.players.reduce((sum, p) => sum + p.score, 0);
-    const isVictory = totalScore >= this.targetScore;
+    const isVictory =
+      totalScore >= this.targetScore &&
+      (this.ingredientsTarget === 0 || this.ingredientsCollected >= this.ingredientsTarget);
 
     this.callbacks.onGameOver({
       winnerPlayerId,
@@ -533,7 +558,9 @@ export class GameSession {
       turnExpiresAt: this.turnExpiresAt,
       turnDurationMs: this.turnDurationMs,
       serverTimestamp: Date.now(),
-      settings: { ...this.room.settings }
+      settings: { ...this.room.settings },
+      ingredientsCollected: this.ingredientsCollected,
+      ingredientsTarget: this.ingredientsTarget
     };
   }
 

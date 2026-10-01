@@ -32,6 +32,18 @@ export interface TileVisual {
   easing: 'linear' | 'easeSwap' | 'easeDrop';
 }
 
+export interface FishVisual {
+  startX: number;
+  startY: number;
+  targetX: number;
+  targetY: number;
+  controlX: number;
+  controlY: number;
+  color: CandyColor;
+  time: number;
+  duration: number;
+}
+
 export type SoundEventCallback = (name: 'pop' | 'whoosh' | 'invalid' | 'laser' | 'wrapped' | 'bomb' | 'sweet' | 'tasty' | 'delicious', combo?: number) => void;
 
 export class CanvasRenderer {
@@ -48,6 +60,7 @@ export class CanvasRenderer {
   private gridMatrix: (TileVisual | null)[][] = [];
   private selectedCoord: Coordinate | null = null;
   private floatingTexts: FloatingText[] = [];
+  private activeFishSwims: FishVisual[] = [];
 
   private cellSize = 48;
   private boardPixelWidth = 432;
@@ -468,6 +481,54 @@ export class CanvasRenderer {
             break;
           }
 
+          case 'FISH_SWIM': {
+            this.soundCallback?.('whoosh');
+            this.spawnPraiseText('SWEDISH FISH!', '#00e5ff');
+
+            const startCenter = this.getCellCenterPixel(ev.from.row, ev.from.col);
+            const targetCenter = this.getCellCenterPixel(ev.target.row, ev.target.col);
+
+            // Compute curved control point for bezier swimming arc
+            const midX = (startCenter.x + targetCenter.x) / 2;
+            const midY = (startCenter.y + targetCenter.y) / 2;
+            const dist = Math.hypot(targetCenter.x - startCenter.x, targetCenter.y - startCenter.y);
+            const perpX = -(targetCenter.y - startCenter.y) / (dist || 1);
+            const perpY = (targetCenter.x - startCenter.x) / (dist || 1);
+            const arcOffset = Math.min(80, Math.max(30, dist * 0.35));
+
+            const fishSwim: FishVisual = {
+              startX: startCenter.x,
+              startY: startCenter.y,
+              targetX: targetCenter.x,
+              targetY: targetCenter.y,
+              controlX: midX + perpX * arcOffset,
+              controlY: midY + perpY * arcOffset,
+              color: ev.fishColor,
+              time: 0,
+              duration: 0.42
+            };
+
+            this.activeFishSwims.push(fishSwim);
+            await this.delay(420);
+
+            // Splash on impact at target
+            this.soundCallback?.('pop');
+            this.particles.spawnShockwave(targetCenter.x, targetCenter.y, 80, '#00e5ff');
+            this.particles.spawnSparkles(targetCenter.x, targetCenter.y, 10);
+            break;
+          }
+
+          case 'INGREDIENT_COLLECTED': {
+            this.soundCallback?.('sweet');
+            const label = ev.ingredientType === 'cherry' ? 'CHERRY!' : 'CHESTNUT!';
+            this.spawnPraiseText(label, '#ffd000');
+            const center = this.getCellCenterPixel(ev.coord.row, ev.coord.col);
+            this.particles.spawnShockwave(center.x, center.y, 100, '#ffd000');
+            this.particles.spawnSparkles(center.x, center.y, 16);
+            await this.delay(240);
+            break;
+          }
+
           case 'GRAVITY_DROP': {
             const dur = 280;
             for (const drop of ev.drops) {
@@ -657,6 +718,23 @@ export class CanvasRenderer {
       ft.y -= 30 * dt; // float upward
       ft.alpha = progress > 0.65 ? Math.max(0, 1 - (progress - 0.65) / 0.35) : 1.0;
     }
+
+    // 4. Update active swimming fish
+    for (let i = this.activeFishSwims.length - 1; i >= 0; i--) {
+      const fish = this.activeFishSwims[i];
+      fish.time += dt;
+      if (fish.time >= fish.duration) {
+        this.activeFishSwims.splice(i, 1);
+        continue;
+      }
+      const t = fish.time / fish.duration;
+      // Spawn bubble / sparkle trail
+      const curX = (1 - t) * (1 - t) * fish.startX + 2 * (1 - t) * t * fish.controlX + t * t * fish.targetX;
+      const curY = (1 - t) * (1 - t) * fish.startY + 2 * (1 - t) * t * fish.controlY + t * t * fish.targetY;
+      if (Math.random() < 0.4) {
+        this.particles.spawnSparkles(curX, curY, 2);
+      }
+    }
   }
 
   public render(): void {
@@ -700,6 +778,29 @@ export class CanvasRenderer {
         }
 
         ctx.drawImage(sprite, -renderW / 2, -renderH / 2, renderW, renderH);
+        ctx.restore();
+      }
+    }
+
+    // 2.2 Draw Active Swimming Fish
+    for (const fish of this.activeFishSwims) {
+      const t = Math.min(1, Math.max(0, fish.time / fish.duration));
+      // Quadratic bezier position
+      const curX = (1 - t) * (1 - t) * fish.startX + 2 * (1 - t) * t * fish.controlX + t * t * fish.targetX;
+      const curY = (1 - t) * (1 - t) * fish.startY + 2 * (1 - t) * t * fish.controlY + t * t * fish.targetY;
+      // Derivative for rotation tangent
+      const dx = 2 * (1 - t) * (fish.controlX - fish.startX) + 2 * t * (fish.targetX - fish.controlX);
+      const dy = 2 * (1 - t) * (fish.controlY - fish.startY) + 2 * t * (fish.targetY - fish.controlY);
+      const angle = Math.atan2(dy, dx);
+
+      const fishSprite = this.textures.getCandySprite(fish.color, 'fish' as any);
+      if (fishSprite) {
+        ctx.save();
+        ctx.translate(curX, curY);
+        ctx.rotate(angle);
+        const wiggle = 1 + 0.15 * Math.sin(t * Math.PI * 8); // Swimming wiggle
+        const fishSize = this.cellSize * 1.25 * wiggle;
+        ctx.drawImage(fishSprite, -fishSize / 2, -fishSize / 2, fishSize, fishSize);
         ctx.restore();
       }
     }

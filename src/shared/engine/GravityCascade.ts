@@ -32,7 +32,8 @@ export class GravityCascade {
   public static applyGravityAndRefill(
     board: (Tile | null)[][],
     prng: PRNG,
-    nextIdRef: { id: number }
+    nextIdRef: { id: number },
+    ingredientContext?: { level: number; collected: number; target: number }
   ): { events: EngineEvent[] } {
     const rows = board.length;
     const cols = board[0].length;
@@ -41,6 +42,17 @@ export class GravityCascade {
     const dropList: { id: number; fromRow: number; toRow: number; col: number }[] = [];
     const spawnList: { id: number; row: number; col: number; color: CandyColor; type: CandyType }[] = [];
 
+    // Count how many ingredients are currently on board
+    let activeIngredientsCount = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const t = board[r][c];
+        if (t && (t.type === CandyType.INGREDIENT_CHERRY || t.type === CandyType.INGREDIENT_CHESTNUT)) {
+          activeIngredientsCount++;
+        }
+      }
+    }
+
     for (let c = 0; c < cols; c++) {
       let writeRow = rows - 1;
 
@@ -48,6 +60,37 @@ export class GravityCascade {
       for (let r = rows - 1; r >= 0; r--) {
         const tile = board[r][c];
         if (tile !== null) {
+          // Check if this tile is an ingredient reaching the bottom row (row rows - 1)
+          const isIngredient =
+            tile.type === CandyType.INGREDIENT_CHERRY ||
+            tile.type === CandyType.INGREDIENT_CHESTNUT;
+
+          if (isIngredient && writeRow === rows - 1) {
+            // Reached bottom row -> Collected!
+            if (r !== writeRow) {
+              dropList.push({
+                id: tile.id,
+                fromRow: r,
+                toRow: writeRow,
+                col: c
+              });
+            }
+            if (ingredientContext && ingredientContext.target > 0) {
+              ingredientContext.collected++;
+              events.push({
+                type: 'INGREDIENT_COLLECTED',
+                ingredientType: tile.type,
+                coord: { row: writeRow, col: c },
+                count: ingredientContext.collected,
+                targetCount: ingredientContext.target
+              });
+            }
+            activeIngredientsCount = Math.max(0, activeIngredientsCount - 1);
+            board[r][c] = null;
+            // writeRow remains rows - 1 so candies above can drop down to fill this spot!
+            continue;
+          }
+
           if (r !== writeRow) {
             dropList.push({
               id: tile.id,
@@ -67,12 +110,29 @@ export class GravityCascade {
       // Remaining slots above writeRow must be refilled
       for (let r = writeRow; r >= 0; r--) {
         const randomColor = prng.nextInt(0, CANDY_COLORS_COUNT - 1) as CandyColor;
+
+        let spawnType = CandyType.NORMAL;
+        let spawnColor = randomColor;
+
+        // Check if we should spawn a falling ingredient (Level >= 2 and total remaining > 0)
+        if (
+          ingredientContext &&
+          ingredientContext.level >= 2 &&
+          ingredientContext.collected + activeIngredientsCount < ingredientContext.target &&
+          activeIngredientsCount < 2 &&
+          prng.next() < 0.18
+        ) {
+          spawnType = prng.next() < 0.5 ? CandyType.INGREDIENT_CHERRY : CandyType.INGREDIENT_CHESTNUT;
+          spawnColor = CandyColor.NONE;
+          activeIngredientsCount++;
+        }
+
         const newTile: Tile = {
           id: nextIdRef.id++,
           row: r,
           col: c,
-          color: randomColor,
-          type: CandyType.NORMAL
+          color: spawnColor,
+          type: spawnType
         };
         board[r][c] = newTile;
         spawnList.push({
@@ -117,7 +177,8 @@ export class GravityCascade {
     nextIdRef: { id: number },
     initialClusters?: MatchCluster[],
     initialStep: number = 1,
-    initialCumulativeScore: number = 0
+    initialCumulativeScore: number = 0,
+    ingredientContext?: { level: number; collected: number; target: number }
   ): { events: EngineEvent[]; totalScore: number } {
     const allEvents: EngineEvent[] = [];
     let totalScore = 0;
@@ -224,7 +285,7 @@ export class GravityCascade {
       }
 
       // Gravity compaction & refill
-      const gravityResult = this.applyGravityAndRefill(board, prng, nextIdRef);
+      const gravityResult = this.applyGravityAndRefill(board, prng, nextIdRef, ingredientContext);
       allEvents.push(...gravityResult.events);
 
       const stepScore = stepBaseScore * step;

@@ -442,6 +442,20 @@
       letter-spacing: 0.3px;
     }
 
+    .badge-ingredient {
+      font-size: 0.8rem;
+      font-weight: 800;
+      background: rgba(255, 64, 129, 0.22);
+      border: 1px solid rgba(255, 64, 129, 0.6);
+      color: #ff80ab;
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.3px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
     .match-score-progress {
       flex: 1;
       max-width: 280px;
@@ -675,7 +689,7 @@
       }
     }
   </style>
-  <script type="module" crossorigin src="./assets/index-Cl1VPC-2.js"></script>
+  <script type="module" crossorigin src="./assets/index-ChF4qfJO.js"></script>
 </head>
 <body>
   <div id="app">
@@ -784,6 +798,7 @@
         <div class="match-bar-info">
           <span id="hud-level-badge" class="badge-level">LEVEL 1</span>
           <span id="hud-round-badge" class="badge-round">ROUND 1/10</span>
+          <span id="hud-ingredient-badge" class="badge-ingredient hidden">🍒 0/0</span>
         </div>
         <div class="match-score-progress">
           <div class="score-progress-header">

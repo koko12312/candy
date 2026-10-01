@@ -171,7 +171,8 @@ export class Match3Engine {
   public resolveMove(
     board: Tile[][],
     move: PlayerMove,
-    prng: PRNG
+    prng: PRNG,
+    ingredientContext?: { level: number; collected: number; target: number }
   ): MoveResolution {
     const { from, to } = move;
     const rows = board.length;
@@ -273,7 +274,8 @@ export class Match3Engine {
       const gravityResult = GravityCascade.applyGravityAndRefill(
         workingBoard,
         prng,
-        nextIdRef
+        nextIdRef,
+        ingredientContext
       );
       events.push(...gravityResult.events);
 
@@ -292,7 +294,8 @@ export class Match3Engine {
         nextIdRef,
         undefined,
         2,
-        turnScore
+        turnScore,
+        ingredientContext
       );
       events.push(...cascadeResult.events);
       turnScore += cascadeResult.totalScore;
@@ -302,7 +305,10 @@ export class Match3Engine {
         workingBoard,
         prng,
         nextIdRef,
-        matches
+        matches,
+        1,
+        0,
+        ingredientContext
       );
       events.push(...cascadeResult.events);
       turnScore += cascadeResult.totalScore;

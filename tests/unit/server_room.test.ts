@@ -415,10 +415,10 @@ describe('Match Pop Multiplayer - Authoritative Server & Room Sync (Milestone M2
 
       // Advance turn from C (slot 2)
       const wrapped = s3.advanceTurn();
-      // Should wrap back to A (slot 0) and increment round
+      // Should wrap back to A (slot 0) and increment round on every player move
       expect(wrapped).toBe(true);
       expect(s3.getCurrentPlayer()?.playerId).toBe(pA.playerId);
-      expect(s3.round).toBe(2);
+      expect(s3.round).toBe(3); // 2 moves performed: 1 + 2 = 3
 
       s3.destroy();
       r3.clearAllDisconnectTimers();

@@ -50,6 +50,8 @@ export class MatchPopApp {
   private currentTargetScore = 2000;
   private currentRound = 1;
   private maxRounds = 10;
+  private currentIngredientsCollected = 0;
+  private currentIngredientsTarget = 0;
 
   constructor() {
     // 1. Audio Engine & Music Sequencer
@@ -265,6 +267,8 @@ export class MatchPopApp {
       this.currentLevel = payload.level || 1;
       this.currentTargetScore = payload.targetScore || 2000;
       this.currentRound = payload.round || 1;
+      this.currentIngredientsCollected = payload.ingredientsCollected || 0;
+      this.currentIngredientsTarget = payload.ingredientsTarget || 0;
 
       const activePlayer = this.currentPlayers.find((p) => p.playerId === payload.activePlayerId);
       this.activeSlot = activePlayer ? activePlayer.slot : 0;
@@ -273,7 +277,15 @@ export class MatchPopApp {
       this.hud.show();
       this.hud.setRoomCode(this.network.getRoomCode());
       this.hud.updatePlayers(this.currentPlayers);
-      this.hud.updateLevel(this.currentLevel, 0, this.currentTargetScore, this.currentRound, this.maxRounds);
+      this.hud.updateLevel(
+        this.currentLevel,
+        0,
+        this.currentTargetScore,
+        this.currentRound,
+        this.maxRounds,
+        this.currentIngredientsCollected,
+        this.currentIngredientsTarget
+      );
       this.hud.updateTurn(
         payload.activePlayerId,
         activePlayer ? activePlayer.name : 'Player',
@@ -309,13 +321,28 @@ export class MatchPopApp {
       this.currentBoard = payload.boardAfterSettled;
     }
 
+    if (payload.ingredientsCollected !== undefined) {
+      this.currentIngredientsCollected = payload.ingredientsCollected;
+    }
+    if (payload.ingredientsTarget !== undefined) {
+      this.currentIngredientsTarget = payload.ingredientsTarget;
+    }
+
     if (payload.playerTotalScore !== undefined) {
       const p = this.currentPlayers.find((pl) => pl.playerId === payload.playerId);
       if (p) p.score = payload.playerTotalScore;
       this.hud.updatePlayers(this.currentPlayers);
       
       const totalScore = this.currentPlayers.reduce((sum, p) => sum + p.score, 0);
-      this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore, this.currentRound, this.maxRounds);
+      this.hud.updateLevel(
+        this.currentLevel,
+        totalScore,
+        this.currentTargetScore,
+        this.currentRound,
+        this.maxRounds,
+        this.currentIngredientsCollected,
+        this.currentIngredientsTarget
+      );
     }
 
     try {
@@ -337,6 +364,13 @@ export class MatchPopApp {
     if (payload.maxRounds !== undefined) this.maxRounds = payload.maxRounds;
 
     const activePlayer = this.currentPlayers.find((p) => p.playerId === payload.activePlayerId);
+    if (payload.ingredientsCollected !== undefined) {
+      this.currentIngredientsCollected = payload.ingredientsCollected;
+    }
+    if (payload.ingredientsTarget !== undefined) {
+      this.currentIngredientsTarget = payload.ingredientsTarget;
+    }
+
     this.hud.updateTurn(
       payload.activePlayerId,
       activePlayer ? activePlayer.name : `Slot ${payload.slot + 1}`,
@@ -348,7 +382,15 @@ export class MatchPopApp {
     );
 
     const totalScore = this.currentPlayers.reduce((sum, p) => sum + p.score, 0);
-    this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore, this.currentRound, this.maxRounds);
+    this.hud.updateLevel(
+      this.currentLevel,
+      totalScore,
+      this.currentTargetScore,
+      this.currentRound,
+      this.maxRounds,
+      this.currentIngredientsCollected,
+      this.currentIngredientsTarget
+    );
 
     this.updateInputLockState();
   }
@@ -384,6 +426,12 @@ export class MatchPopApp {
     if (payload.maxRounds !== undefined) {
       this.maxRounds = payload.maxRounds;
     }
+    if (payload.ingredientsCollected !== undefined) {
+      this.currentIngredientsCollected = payload.ingredientsCollected;
+    }
+    if (payload.ingredientsTarget !== undefined) {
+      this.currentIngredientsTarget = payload.ingredientsTarget;
+    }
     this.currentBoard = payload.newBoard;
     this.renderer.setBoard(payload.newBoard);
     
@@ -393,7 +441,15 @@ export class MatchPopApp {
     
     // Update HUD
     const totalScore = this.currentPlayers.reduce((s, p) => s + p.score, 0);
-    this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore, this.currentRound, this.maxRounds);
+    this.hud.updateLevel(
+      this.currentLevel,
+      totalScore,
+      this.currentTargetScore,
+      this.currentRound,
+      this.maxRounds,
+      this.currentIngredientsCollected,
+      this.currentIngredientsTarget
+    );
   }
 
   private handleGameOver(payload: import('../shared/types').GameOverPayload): void {
@@ -413,6 +469,12 @@ export class MatchPopApp {
     if (payload.targetScore) this.currentTargetScore = payload.targetScore;
     if (payload.round) this.currentRound = payload.round;
     if (payload.settings?.maxRounds) this.maxRounds = payload.settings.maxRounds;
+    if (payload.ingredientsCollected !== undefined) {
+      this.currentIngredientsCollected = payload.ingredientsCollected;
+    }
+    if (payload.ingredientsTarget !== undefined) {
+      this.currentIngredientsTarget = payload.ingredientsTarget;
+    }
 
     const activePlayer = this.currentPlayers.find((p) => p.playerId === payload.activePlayerId);
     this.activeSlot = activePlayer ? activePlayer.slot : 0;
@@ -424,7 +486,15 @@ export class MatchPopApp {
       this.hud.setRoomCode(payload.roomCode);
       this.hud.updatePlayers(payload.players);
       const totalScore = this.currentPlayers.reduce((sum, p) => sum + p.score, 0);
-      this.hud.updateLevel(this.currentLevel, totalScore, this.currentTargetScore, this.currentRound, this.maxRounds);
+      this.hud.updateLevel(
+        this.currentLevel,
+        totalScore,
+        this.currentTargetScore,
+        this.currentRound,
+        this.maxRounds,
+        this.currentIngredientsCollected,
+        this.currentIngredientsTarget
+      );
       this.hud.updateTurn(
         payload.activePlayerId,
         activePlayer ? activePlayer.name : 'Player',

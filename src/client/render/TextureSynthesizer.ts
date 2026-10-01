@@ -71,7 +71,8 @@ export class TextureSynthesizer {
       CandyType.NORMAL,
       CandyType.STRIPED_HORIZONTAL,
       CandyType.STRIPED_VERTICAL,
-      CandyType.WRAPPED
+      CandyType.WRAPPED,
+      CandyType.FISH
     ];
 
     for (const c of colors) {
@@ -96,10 +97,36 @@ export class TextureSynthesizer {
         this.cache.set(`${c}_${CandyType.COLOR_BOMB}`, bombCanvas);
       }
     }
+
+    // Falling Ingredients: Cherry & Chestnut (Color independent)
+    const cherryCanvas = this.createOffscreenCanvas();
+    const cherryCtx = cherryCanvas.getContext('2d');
+    if (cherryCtx) {
+      this.renderCherryIngredient(cherryCtx);
+      this.cache.set(`${CandyColor.NONE}_${CandyType.INGREDIENT_CHERRY}`, cherryCanvas);
+      for (const c of colors) {
+        this.cache.set(`${c}_${CandyType.INGREDIENT_CHERRY}`, cherryCanvas);
+      }
+    }
+
+    const chestnutCanvas = this.createOffscreenCanvas();
+    const chestnutCtx = chestnutCanvas.getContext('2d');
+    if (chestnutCtx) {
+      this.renderChestnutIngredient(chestnutCtx);
+      this.cache.set(`${CandyColor.NONE}_${CandyType.INGREDIENT_CHESTNUT}`, chestnutCanvas);
+      for (const c of colors) {
+        this.cache.set(`${c}_${CandyType.INGREDIENT_CHESTNUT}`, chestnutCanvas);
+      }
+    }
   }
 
   private renderCandyToContext(ctx: CanvasRenderingContext2D, color: CandyColor, type: CandyType): void {
     ctx.clearRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+
+    if (type === CandyType.FISH) {
+      this.drawFishCandy(ctx, color);
+      return;
+    }
 
     // If wrapped candy, draw foil cellophane wings first (underneath base candy)
     if (type === CandyType.WRAPPED) {
@@ -543,6 +570,238 @@ export class TextureSynthesizer {
     spec.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
     spec.addColorStop(1, 'rgba(255, 255, 255, 0)');
     ctx.fillStyle = spec;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Swedish Fish Candy (gummy fish silhouette in the candy's color)
+  private drawFishCandy(ctx: CanvasRenderingContext2D, color: CandyColor): void {
+    const cx = SPRITE_SIZE / 2;
+    const cy = SPRITE_SIZE / 2;
+
+    const colorPalettes: Record<CandyColor, { light: string; mid: string; dark: string }> = {
+      [CandyColor.RED]: { light: '#ff5277', mid: '#d50000', dark: '#7f0000' },
+      [CandyColor.ORANGE]: { light: '#ffa726', mid: '#ff6d00', dark: '#b23c00' },
+      [CandyColor.YELLOW]: { light: '#ffff56', mid: '#ffd600', dark: '#e65100' },
+      [CandyColor.GREEN]: { light: '#69f0ae', mid: '#00c853', dark: '#00600f' },
+      [CandyColor.BLUE]: { light: '#40c4ff', mid: '#0091ea', dark: '#01579b' },
+      [CandyColor.PURPLE]: { light: '#ea80fc', mid: '#aa00ff', dark: '#4a0072' },
+      [CandyColor.NONE]: { light: '#ffffff', mid: '#b0bec5', dark: '#546e7a' }
+    };
+
+    const pal = colorPalettes[color] || colorPalettes[CandyColor.RED];
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 5;
+
+    // Fish body outline facing right
+    ctx.beginPath();
+    // Start at nose (right side)
+    ctx.moveTo(cx + 42, cy);
+    // Upper body curve to tail base
+    ctx.bezierCurveTo(cx + 30, cy - 26, cx - 12, cy - 26, cx - 26, cy - 8);
+    // Tail fin (forked)
+    ctx.lineTo(cx - 44, cy - 24);
+    ctx.quadraticCurveTo(cx - 36, cy, cx - 44, cy + 24);
+    ctx.lineTo(cx - 26, cy + 8);
+    // Lower body curve back to nose
+    ctx.bezierCurveTo(cx - 12, cy + 26, cx + 30, cy + 26, cx + 42, cy);
+    ctx.closePath();
+
+    const grad = ctx.createRadialGradient(cx + 6, cy - 6, 6, cx, cy, 48);
+    grad.addColorStop(0, pal.light);
+    grad.addColorStop(0.5, pal.mid);
+    grad.addColorStop(1, pal.dark);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Dorsal fin accent
+    ctx.beginPath();
+    ctx.moveTo(cx - 6, cy - 24);
+    ctx.quadraticCurveTo(cx + 10, cy - 32, cx + 18, cy - 20);
+    ctx.closePath();
+    ctx.fillStyle = pal.light;
+    ctx.fill();
+
+    ctx.restore();
+
+    // Fish Eye & Scales Gummy Details
+    ctx.save();
+    // Eye socket & sparkle
+    ctx.beginPath();
+    ctx.arc(cx + 26, cy - 5, 5.5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(cx + 27, cy - 5, 3, 0, Math.PI * 2);
+    ctx.fillStyle = pal.dark;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(cx + 28, cy - 6, 1.2, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+
+    // Cute curved scale ridges
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    
+    // Scale 1
+    ctx.beginPath();
+    ctx.arc(cx + 6, cy - 3, 10, -Math.PI / 3, Math.PI / 3);
+    ctx.stroke();
+
+    // Scale 2
+    ctx.beginPath();
+    ctx.arc(cx - 10, cy - 2, 10, -Math.PI / 3, Math.PI / 3);
+    ctx.stroke();
+
+    // Specular dorsal gloss
+    ctx.beginPath();
+    ctx.ellipse(cx + 4, cy - 14, 18, 5, 0.1, 0, Math.PI * 2);
+    const specGrad = ctx.createLinearGradient(cx - 14, cy - 19, cx + 22, cy - 9);
+    specGrad.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+    specGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = specGrad;
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  // Falling Ingredient: Cherry (glossy double cherries with green stem & leaf)
+  private renderCherryIngredient(ctx: CanvasRenderingContext2D): void {
+    const cx = SPRITE_SIZE / 2;
+    const cy = SPRITE_SIZE / 2;
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 6;
+
+    // Green Leaf
+    ctx.beginPath();
+    ctx.ellipse(cx + 10, cy - 34, 14, 6, Math.PI / 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#43a047';
+    ctx.fill();
+
+    // Stem
+    ctx.beginPath();
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#689f38';
+    // Left cherry stem
+    ctx.moveTo(cx + 2, cy - 36);
+    ctx.quadraticCurveTo(cx - 14, cy - 18, cx - 18, cy + 8);
+    ctx.stroke();
+    // Right cherry stem
+    ctx.beginPath();
+    ctx.moveTo(cx + 2, cy - 36);
+    ctx.quadraticCurveTo(cx + 16, cy - 16, cx + 18, cy + 12);
+    ctx.stroke();
+
+    // Left Cherry Ball
+    ctx.beginPath();
+    ctx.arc(cx - 18, cy + 14, 22, 0, Math.PI * 2);
+    const grad1 = ctx.createRadialGradient(cx - 24, cy + 8, 3, cx - 18, cy + 14, 24);
+    grad1.addColorStop(0, '#ff1744');
+    grad1.addColorStop(0.6, '#b71c1c');
+    grad1.addColorStop(1, '#4a0007');
+    ctx.fillStyle = grad1;
+    ctx.fill();
+
+    // Right Cherry Ball
+    ctx.beginPath();
+    ctx.arc(cx + 18, cy + 18, 22, 0, Math.PI * 2);
+    const grad2 = ctx.createRadialGradient(cx + 12, cy + 12, 3, cx + 18, cy + 18, 24);
+    grad2.addColorStop(0, '#ff1744');
+    grad2.addColorStop(0.6, '#b71c1c');
+    grad2.addColorStop(1, '#4a0007');
+    ctx.fillStyle = grad2;
+    ctx.fill();
+
+    ctx.restore();
+
+    // Gloss gleams
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    // Left gleam
+    ctx.beginPath();
+    ctx.ellipse(cx - 24, cy + 6, 7, 3, -Math.PI / 4, 0, Math.PI * 2);
+    ctx.fill();
+    // Right gleam
+    ctx.beginPath();
+    ctx.ellipse(cx + 12, cy + 10, 7, 3, -Math.PI / 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Falling Ingredient: Chestnut / Hazelnut (Candy Crush style glossy nut with textured base)
+  private renderChestnutIngredient(ctx: CanvasRenderingContext2D): void {
+    const cx = SPRITE_SIZE / 2;
+    const cy = SPRITE_SIZE / 2;
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 6;
+
+    // Nut Body (Teardrop / acorn-like shape)
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 38); // Pointed tip
+    ctx.bezierCurveTo(cx + 38, cy - 10, cx + 36, cy + 30, cx, cy + 36);
+    ctx.bezierCurveTo(cx - 36, cy + 30, cx - 38, cy - 10, cx, cy - 38);
+    ctx.closePath();
+
+    // Rich mahogany gradient
+    const grad = ctx.createRadialGradient(cx - 10, cy - 8, 4, cx, cy, 42);
+    grad.addColorStop(0, '#a16238');
+    grad.addColorStop(0.5, '#6d3816');
+    grad.addColorStop(1, '#3a1805');
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Pale beige nut base (bottom cap)
+    ctx.beginPath();
+    ctx.moveTo(cx - 30, cy + 18);
+    ctx.quadraticCurveTo(cx, cy + 10, cx + 30, cy + 18);
+    ctx.bezierCurveTo(cx + 26, cy + 32, cx - 26, cy + 32, cx - 30, cy + 18);
+    ctx.closePath();
+
+    const baseGrad = ctx.createLinearGradient(cx, cy + 14, cx, cy + 36);
+    baseGrad.addColorStop(0, '#f0d3a7');
+    baseGrad.addColorStop(1, '#c99a5e');
+    ctx.fillStyle = baseGrad;
+    ctx.fill();
+
+    // Nut tip little curl
+    ctx.beginPath();
+    ctx.moveTo(cx - 2, cy - 38);
+    ctx.lineTo(cx, cy - 44);
+    ctx.lineTo(cx + 2, cy - 38);
+    ctx.fillStyle = '#4a2007';
+    ctx.fill();
+
+    ctx.restore();
+
+    // Vertical woodgrain & glossy shine
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx - 14, cy - 24);
+    ctx.quadraticCurveTo(cx - 18, cy, cx - 16, cy + 14);
+    ctx.moveTo(cx + 14, cy - 24);
+    ctx.quadraticCurveTo(cx + 18, cy, cx + 16, cy + 14);
+    ctx.stroke();
+
+    // Specular shine
+    ctx.beginPath();
+    ctx.ellipse(cx - 12, cy - 16, 12, 5, -Math.PI / 4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
     ctx.fill();
     ctx.restore();
   }
