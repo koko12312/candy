@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Code
@@ -92,4 +94,24 @@ jobs:
           name: MatchPopMultiplayer-debug-apk
           path: MatchPopMultiplayer-debug.apk
           retention-days: 7
-          
+
+      - name: Extract App Version
+        id: get_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Publish Public GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          name: "Match Pop Multiplayer ${{ steps.get_version.outputs.version }}"
+          body: |
+            ## Match Pop Multiplayer ${{ steps.get_version.outputs.version }}
+            
+            Download the Android APK below to install the game:
+            - **[Download MatchPopMultiplayer-debug.apk](https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/MatchPopMultiplayer-debug.apk)**
+          files: |
+            MatchPopMultiplayer-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
