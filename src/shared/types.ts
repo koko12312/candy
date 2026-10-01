@@ -210,6 +210,7 @@ export interface GameStartPayload {
   turnExpiresAt: number;
   turnDurationMs: number;
   serverTimestamp?: number;
+  maxRounds?: number;
   ingredientsCollected?: number;
   ingredientsTarget?: number;
 }

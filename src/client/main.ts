@@ -267,6 +267,9 @@ export class MatchPopApp {
       this.currentLevel = payload.level || 1;
       this.currentTargetScore = payload.targetScore || 2000;
       this.currentRound = payload.round || 1;
+      if (payload.maxRounds !== undefined) {
+        this.maxRounds = payload.maxRounds;
+      }
       this.currentIngredientsCollected = payload.ingredientsCollected || 0;
       this.currentIngredientsTarget = payload.ingredientsTarget || 0;
 

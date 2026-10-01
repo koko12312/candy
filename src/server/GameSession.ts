@@ -90,6 +90,10 @@ export class GameSession {
       throw new Error('Cannot start GameSession with 0 connected players');
     }
 
+    // Scale moves by player count: 10 moves per player for the shared team move pool
+    this.baseMaxRounds = (this.room.settings.maxRounds || 10) * Math.max(1, connected.length);
+    this.room.settings.maxRounds = this.baseMaxRounds;
+
     const firstPlayer = connected[0];
     this.activePlayerId = firstPlayer.playerId;
     this.activeSlot = firstPlayer.slot;
@@ -111,6 +115,7 @@ export class GameSession {
       turnExpiresAt: this.turnExpiresAt,
       turnDurationMs: this.turnDurationMs,
       serverTimestamp: Date.now(),
+      maxRounds: this.room.settings.maxRounds,
       ingredientsCollected: this.ingredientsCollected,
       ingredientsTarget: this.ingredientsTarget
     });
@@ -359,6 +364,7 @@ export class GameSession {
           this.ingredientsTarget = this.level >= 2 ? 2 + (this.level - 2) : 0;
 
           // Full fresh moves for the new level PLUS any leftover turns carried over
+          this.baseMaxRounds = 10 * Math.max(1, this.getActivePlayers().length);
           this.room.settings.maxRounds = this.baseMaxRounds + leftoverRounds;
           this.round = 1;
           this.room.level = this.level;
