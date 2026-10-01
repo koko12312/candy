@@ -28,8 +28,8 @@
   - Added Swedish Fish, Cherry, and Chestnut procedural vector sprites to `TextureSynthesizer.ts`, animated fish swimming in `CanvasRenderer.ts`, and updated HUD in `HUD.ts` and `index.html` with the ingredient goal indicator (`🍒 collected/target`).
   - Built production bundle v1.0.15 and verified all 121 unit tests pass.
 - **Permanent Keystore Persistence in CI/CD**:
-  - Configured GitHub Actions workflow (`.github/workflows/build-apk.yml`) with `contents: write` permissions to generate and commit `android/app/matchpop-debug.keystore` permanently back to the repository on its first run.
-  - Ensures every subsequent APK build uses the identical cryptographic signing key, allowing players to install new APK versions directly over existing installations without having to uninstall.
+  - Configured GitHub Actions workflow (`.github/workflows/build-apk.yml`) with `contents: write` permissions. Run `36883827200` generated and committed `android/app/matchpop-debug.keystore` permanently to the repository (commit `eb362ab`).
+  - Pulled `matchpop-debug.keystore` locally. All future APK builds will use this exact committed keystore, ensuring all future updates install directly over existing versions without package conflicts.
 
 ## Global Rules & Directives
 - **Rule 5 (Mandatory Real-Time Memory Updating)**:
