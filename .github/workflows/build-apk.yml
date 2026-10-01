@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Code
@@ -74,6 +76,13 @@ jobs:
               -storepass matchpop123 \
               -keypass matchpop123 \
               -dname "CN=MatchPop, OU=Gaming, O=MatchPop, L=City, S=State, C=US"
+            
+            # Commit keystore permanently back to the repository so subsequent builds use the identical key
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git add android/app/matchpop-debug.keystore
+            git commit -m "chore: persist permanent signing keystore for continuous APK upgrades [skip ci]" || true
+            git push origin main || true
           fi
 
       - name: Compile Debug APK with Gradle
