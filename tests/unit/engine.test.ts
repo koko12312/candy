@@ -626,5 +626,30 @@ describe('Match Pop Multiplayer - Core Match-3 Engine Suite', () => {
       // Exactly 1 event for the swapped color bomb purge
       expect(cbDetonations.length).toBe(1);
     });
+
+    it('verifies 2x2 square match produces a Swedish Fish candy', () => {
+      const board = createDummyBoard();
+      // Setup a 2x2 square ready to form with 1 swap:
+      // (2,2) RED, (2,3) RED, (3,2) RED, (3,4) RED swapped to (3,3)
+      board[2][2].color = CandyColor.RED;
+      board[2][3].color = CandyColor.RED;
+      board[3][2].color = CandyColor.RED;
+      board[3][3].color = CandyColor.BLUE;
+      board[3][4].color = CandyColor.RED;
+
+      const move: PlayerMove = {
+        playerId: 'p1',
+        from: { row: 3, col: 4 },
+        to: { row: 3, col: 3 }
+      };
+
+      const result = engine.resolveMove(board, move, prng);
+      expect(result.valid).toBe(true);
+
+      const matchEvent = result.events.find(
+        (e) => e.type === 'MATCH_FOUND' && (e as any).spawnSpecial?.type === CandyType.FISH
+      );
+      expect(matchEvent).toBeDefined();
+    });
   });
 });

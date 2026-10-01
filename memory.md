@@ -21,14 +21,17 @@
   - Updated client `handleLevelUp` and `handleTurnChange` in `main.ts` to sync `currentRound` and `maxRounds`, refreshing the HUD goal progress bar, triggering the level-up celebration overlay, and playing the fanfare.
   - Deployed the authoritative backend live to Render (`srv-damj9n942hec739b8cf0`), ensuring that the production server in the cloud is always synchronized with code changes. Every change affecting game logic is pushed and deployed to Render immediately.
 - **Swedish Fish Candy, Falling Ingredients & Multiplayer Move Balancing**:
-  - Implemented 2x2 Swedish Fish Candy formation in `MatchDetector.ts` and `SpecialCandyHandler.ts`. Swedish Fish swim with an animated curved trajectory and bubble trail to target high-priority tiles or candies under falling ingredients.
+  - Implemented 2x2 Swedish Fish Candy formation in `MatchDetector.ts` and `SpecialCandyHandler.ts`. Fixed 2x2 square match detection by removing premature early exit in `MatchDetector.detectMatches`. Added 2x2 square forbidden check in `Match3Engine.createInitialBoard` to guarantee clean initial boards with 0 pre-existing matches.
   - Implemented authentic Candy Crush Swedish Fish special combinations (Fish + Fish spawns 3 swimming fish, Fish + Striped creates a swimming striped rocket, Fish + Wrapped creates a swimming detonator, Fish + Color Bomb spawns 3 fish of the matching color).
   - Implemented Falling Ingredients (Cherries and Chestnuts) spawning in refills on Level 2+, dropping via gravity, and collecting at the bottom row with collection counter tracking (`ingredientsCollected` / `ingredientsTarget`).
-  - Balanced multiplayer move count in `GameSession.ts` by counting every individual player move toward the shared move pool (`this.round++`), preventing multiple players from multiplying moves.
+  - Balanced multiplayer move count in `GameSession.ts`:
+    - Base rounds scale dynamically by connected player count (`baseMaxRounds = 10 * connectedPlayers.length`), giving 10 moves for 1 player, 20 moves for 2 players, 30 for 3, and 40 for 4.
+    - Every move decrements 1 move from the shared pool (`this.round++`).
+    - Leveling up preserves all leftover moves from the previous level and adds fresh base rounds (`room.settings.maxRounds = baseMaxRounds + leftoverRounds`, `round = 1`).
+    - Synchronized `maxRounds` through `GameStartPayload` and `onTurnChange` so the client HUD accurately displays `ROUND 1 / 20` for 2 players immediately.
   - Added Swedish Fish, Cherry, and Chestnut procedural vector sprites to `TextureSynthesizer.ts`, animated fish swimming in `CanvasRenderer.ts`, and updated HUD in `HUD.ts` and `index.html` with the ingredient goal indicator (`🍒 collected/target`).
-  - Built production bundle v1.0.17 and deployed live to Render (`srv-damj9n942hec739b8cf0`, commit `8a6b376`).
-  - Added automated public GitHub Releases publishing to `.github/workflows/build-apk.yml` via `softprops/action-gh-release@v2`. Every build now creates a public release under tag `vX.X.X` so anyone without a GitHub account can download the APK with a single direct link without signing in.
-  - All 121 unit tests passing.
+  - Added automated public GitHub Releases publishing to `.github/workflows/build-apk.yml` via `softprops/action-gh-release@v2`. Every build creates a public release under tag `vX.X.X` so anyone without a GitHub account can download the APK with a single direct link without signing in.
+  - Built production bundle v1.0.19 and verified all 122 unit tests pass.
 
 ## Global Rules & Directives
 - **Rule 5 (Mandatory Real-Time Memory Updating)**:

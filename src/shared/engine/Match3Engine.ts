@@ -53,13 +53,22 @@ export class Match3Engine {
       for (let r = 0; r < rows; r++) {
         const row: Tile[] = [];
         for (let c = 0; c < cols; c++) {
-          // Exclude colors that would immediately form a 3-match with neighbors to left or above
+          // Exclude colors that would immediately form a 3-match with neighbors to left or above,
+          // or a 2x2 square with top-left neighbors
           const forbiddenColors = new Set<CandyColor>();
           if (c >= 2 && row[c - 1].color === row[c - 2].color) {
             forbiddenColors.add(row[c - 1].color);
           }
           if (r >= 2 && board[r - 1][c].color === board[r - 2][c].color) {
             forbiddenColors.add(board[r - 1][c].color);
+          }
+          if (
+            r >= 1 &&
+            c >= 1 &&
+            board[r - 1][c].color === row[c - 1].color &&
+            board[r - 1][c - 1].color === row[c - 1].color
+          ) {
+            forbiddenColors.add(row[c - 1].color);
           }
 
           const validColors: CandyColor[] = [];
