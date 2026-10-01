@@ -61,6 +61,9 @@ export class Match3Engine {
           if (r >= 2 && board[r - 1][c].color === board[r - 2][c].color) {
             forbiddenColors.add(board[r - 1][c].color);
           }
+          if (c >= 1 && r >= 1 && row[c - 1].color === board[r - 1][c].color && board[r - 1][c].color === board[r - 1][c - 1].color) {
+            forbiddenColors.add(row[c - 1].color);
+          }
 
           const validColors: CandyColor[] = [];
           for (let colVal = 0; colVal < CANDY_COLORS_COUNT; colVal++) {
@@ -81,8 +84,8 @@ export class Match3Engine {
         board.push(row);
       }
 
-      // Check if board has 0 pre-existing matches (including 2x2 squares) and at least one valid move
-      if (MatchDetector.detectMatches(board).length === 0 && this.hasValidMoves(board)) {
+      // Check if board has at least one valid move AND exactly 0 pre-existing matches
+      if (this.hasValidMoves(board) && MatchDetector.detectMatches(board).length === 0) {
         return board;
       }
     }
@@ -265,16 +268,8 @@ export class Match3Engine {
       turnScore += comboResult.score;
       events.push(...comboResult.events);
 
-      // Clear affected cells from board (ingredients are never destroyed by combos)
+      // Clear affected cells from board
       for (const coord of comboResult.affectedCoords) {
-        const t = workingBoard[coord.row][coord.col];
-        if (
-          t &&
-          (t.type === CandyType.INGREDIENT_CHERRY ||
-            t.type === CandyType.INGREDIENT_CHESTNUT)
-        ) {
-          continue;
-        }
         workingBoard[coord.row][coord.col] = null;
       }
 

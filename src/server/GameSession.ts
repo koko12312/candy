@@ -59,8 +59,8 @@ export class GameSession {
     this.seed = customSeed ?? Math.floor(Math.random() * 1000000);
     this.prng = new PRNG(this.seed);
     this.turnDurationMs = (this.room.settings.turnDurationSeconds || 20) * 1000;
-    this.baseMaxRounds = 10;
-    this.ingredientsTarget = this.level % 2 === 0 ? Math.min(5, 2 + Math.floor((this.level - 2) / 2)) : 0;
+    this.baseMaxRounds = this.room.settings.maxRounds || 10;
+    this.ingredientsTarget = this.level >= 2 ? 2 : 0;
   }
 
   /**
@@ -91,7 +91,7 @@ export class GameSession {
     }
 
     // Scale moves by player count: 10 moves per player for the shared team move pool
-    this.baseMaxRounds = 10 * Math.max(1, connected.length);
+    this.baseMaxRounds = (this.room.settings.maxRounds || 10) * Math.max(1, connected.length);
     this.room.settings.maxRounds = this.baseMaxRounds;
 
     const firstPlayer = connected[0];
@@ -330,12 +330,12 @@ export class GameSession {
       // Emit game:move_result immediately
       this.callbacks.onMoveResult(movePayload);
 
-      // Authentic animation settling delay based on cascade steps (tuned for crisp multiplayer pacing)
+      // Authentic animation settling delay based on cascade steps
       const cascadeSteps = Math.max(
         1,
         resolution.events.filter((e) => e.type === 'CASCADE_STEP_COMPLETE').length
       );
-      const animDelay = Math.min(1800, cascadeSteps * 250);
+      const animDelay = Math.min(3000, cascadeSteps * 400);
 
       scheduledAsync = true;
       this.clearAnimationTimer();
@@ -359,11 +359,9 @@ export class GameSession {
 
           // Level Up! Advance levels dynamically
           this.level++;
-          // Target score is set relative to current totalScore so the new level starts with an empty progress bar
-          this.targetScore = totalScore + (this.level * 2000) + 1000;
+          this.targetScore = this.targetScore + (this.level * 2000) + 1000;
           this.ingredientsCollected = 0;
-          // Alternating collection feature: only even levels have ingredients, capped at max 5
-          this.ingredientsTarget = this.level % 2 === 0 ? Math.min(5, 2 + Math.floor((this.level - 2) / 2)) : 0;
+          this.ingredientsTarget = this.level >= 2 ? 2 + (this.level - 2) : 0;
 
           // Full fresh moves for the new level PLUS any leftover turns carried over
           this.baseMaxRounds = 10 * Math.max(1, this.getActivePlayers().length);

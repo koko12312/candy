@@ -20,6 +20,8 @@ export interface TileVisual {
   col: number;
   color: number;
   type: string;
+  startX: number;
+  startY: number;
   x: number;
   y: number;
   targetX: number;
@@ -237,6 +239,8 @@ export class CanvasRenderer {
           col: c,
           color: t.color,
           type: t.type,
+          startX: tx,
+          startY: ty,
           x: tx,
           y: ty,
           targetX: tx,
@@ -258,6 +262,8 @@ export class CanvasRenderer {
     for (const visual of this.boardTiles.values()) {
       visual.targetX = this.boardOffsetX + visual.col * this.cellSize;
       visual.targetY = this.boardOffsetY + visual.row * this.cellSize;
+      visual.startX = visual.targetX;
+      visual.startY = visual.targetY;
       visual.x = visual.targetX;
       visual.y = visual.targetY;
     }
@@ -304,20 +310,24 @@ export class CanvasRenderer {
 
     this.soundCallback?.('whoosh');
 
-    const dur = 140;
+    const dur = 200;
     const xA = this.boardOffsetX + from.col * this.cellSize;
     const yA = this.boardOffsetY + from.row * this.cellSize;
     const xB = this.boardOffsetX + to.col * this.cellSize;
     const yB = this.boardOffsetY + to.row * this.cellSize;
 
+    tileA.startX = tileA.x;
+    tileA.startY = tileA.y;
     tileA.targetX = xB;
     tileA.targetY = yB;
     tileA.animTime = 0;
     tileA.animDuration = dur;
     tileA.easing = 'easeSwap';
 
+    tileB.startX = tileB.x;
+    tileB.startY = tileB.y;
     tileB.targetX = xA;
-    tileB.targetY = yB;
+    tileB.targetY = yA;
     tileB.animTime = 0;
     tileB.animDuration = dur;
     tileB.easing = 'easeSwap';
@@ -326,10 +336,14 @@ export class CanvasRenderer {
       setTimeout(() => {
         if (revert) {
           this.soundCallback?.('invalid');
+          tileA.startX = tileA.x;
+          tileA.startY = tileA.y;
           tileA.targetX = xA;
           tileA.targetY = yA;
           tileA.animTime = 0;
           tileA.animDuration = dur;
+          tileB.startX = tileB.x;
+          tileB.startY = tileB.y;
           tileB.targetX = xB;
           tileB.targetY = yB;
           tileB.animTime = 0;
@@ -373,8 +387,9 @@ export class CanvasRenderer {
             for (const m of ev.tiles) {
               const visual = this.boardTiles.get(m.id);
               if (visual) {
-                const center = this.getCellCenterPixel(visual.row, visual.col);
-                this.particles.spawnCandyShatter(center.x, center.y, visual.color, 12);
+                const cx = visual.x + this.cellSize / 2;
+                const cy = visual.y + this.cellSize / 2;
+                this.particles.spawnCandyShatter(cx, cy, visual.color, 14);
                 visual.scale = 0;
                 visual.alpha = 0;
                 this.boardTiles.delete(visual.id);
@@ -398,16 +413,20 @@ export class CanvasRenderer {
               }
               const center = this.getCellCenterPixel(sp.row, sp.col);
               this.particles.spawnSparkles(center.x, center.y, 14);
+              const tx = center.x - this.cellSize / 2;
+              const ty = center.y - this.cellSize / 2;
               const newVis: TileVisual = {
                 id: sp.id,
                 row: sp.row,
                 col: sp.col,
                 color: sp.color,
                 type: sp.type,
-                x: center.x - this.cellSize / 2,
-                y: center.y - this.cellSize / 2,
-                targetX: center.x - this.cellSize / 2,
-                targetY: center.y - this.cellSize / 2,
+                startX: tx,
+                startY: ty,
+                x: tx,
+                y: ty,
+                targetX: tx,
+                targetY: ty,
                 scale: 1.4,
                 alpha: 1.0,
                 rotation: 0,
@@ -460,15 +479,11 @@ export class CanvasRenderer {
               this.particles.spawnShockwave(originCenter.x, originCenter.y, 280, 'rgba(255, 0, 127, 0.95)');
             }
 
-            // Remove destroyed tiles safely using affectedTiles or clearedTiles fallback (ingredients are never destroyed)
+            // Remove destroyed tiles safely using affectedTiles or clearedTiles fallback
             const destroyedList = (ev as any).affectedTiles || (ev as any).clearedTiles || [];
             for (const t of destroyedList) {
               const visual = this.boardTiles.get(t.id);
-              if (
-                visual &&
-                visual.type !== 'cherry' &&
-                visual.type !== 'chestnut'
-              ) {
+              if (visual) {
                 const center = this.getCellCenterPixel(visual.row, visual.col);
                 this.particles.spawnCandyShatter(center.x, center.y, visual.color, 16);
                 visual.scale = 0;
@@ -480,8 +495,8 @@ export class CanvasRenderer {
               }
             }
 
-            // Quick breathing room so explosions and shockwaves are visible without lag
-            await this.delay(220);
+            // Generous breathing room so explosions and shockwaves are fully visible
+            await this.delay(360);
             break;
           }
 
@@ -509,11 +524,11 @@ export class CanvasRenderer {
               controlY: midY + perpY * arcOffset,
               color: ev.fishColor,
               time: 0,
-              duration: 0.28
+              duration: 0.42
             };
 
             this.activeFishSwims.push(fishSwim);
-            await this.delay(280);
+            await this.delay(420);
 
             // Splash on impact at target
             this.soundCallback?.('pop');
@@ -529,7 +544,7 @@ export class CanvasRenderer {
             const center = this.getCellCenterPixel(ev.coord.row, ev.coord.col);
             this.particles.spawnShockwave(center.x, center.y, 100, '#ffd000');
             this.particles.spawnSparkles(center.x, center.y, 16);
-            await this.delay(160);
+            await this.delay(240);
             break;
           }
 
@@ -540,6 +555,8 @@ export class CanvasRenderer {
               if (visual) {
                 visual.row = drop.toRow;
                 visual.col = drop.col;
+                visual.startX = visual.x;
+                visual.startY = visual.y;
                 visual.targetX = this.boardOffsetX + drop.col * this.cellSize;
                 visual.targetY = this.boardOffsetY + drop.toRow * this.cellSize;
                 visual.animTime = 0;
@@ -567,6 +584,8 @@ export class CanvasRenderer {
                 col: spawn.col,
                 color: spawn.color,
                 type: spawn.type,
+                startX: startX,
+                startY: startY,
                 x: startX,
                 y: startY,
                 targetX: this.boardOffsetX + spawn.col * this.cellSize,
@@ -690,12 +709,14 @@ export class CanvasRenderer {
           ease = 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2);
         }
 
-        visual.x = visual.x + (visual.targetX - visual.x) * ease;
-        visual.y = visual.y + (visual.targetY - visual.y) * ease;
+        visual.x = visual.startX + (visual.targetX - visual.startX) * ease;
+        visual.y = visual.startY + (visual.targetY - visual.startY) * ease;
 
         if (p >= 1.0) {
           visual.x = visual.targetX;
           visual.y = visual.targetY;
+          visual.startX = visual.targetX;
+          visual.startY = visual.targetY;
           visual.animDuration = 0;
         }
       }

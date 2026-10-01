@@ -20,14 +20,19 @@
   - Added leftover turns carry-over on level up (`room.settings.maxRounds = baseMaxRounds + leftoverRounds`), preserving every remaining move from the previous round so players don't lose leftover turns when beating a level early.
   - Updated client `handleLevelUp` and `handleTurnChange` in `main.ts` to sync `currentRound` and `maxRounds`, refreshing the HUD goal progress bar, triggering the level-up celebration overlay, and playing the fanfare.
   - Deployed the authoritative backend live to Render (`srv-damj9n942hec739b8cf0`), ensuring that the production server in the cloud is always synchronized with code changes. Every change affecting game logic is pushed and deployed to Render immediately.
-- **Gameplay Balancing, Indestructible Ingredients & Multiplayer Latency Overhaul**:
-  - **Full Rematch Clean Reset**: Fixed cross-game move pollution by ensuring `Room.resetToLobby()` resets `settings.maxRounds = 10` and `GameSession.start()` always derives starting moves cleanly as `10 * connectedPlayers.length`.
-  - **Indestructible Ingredients**: Cherry and Chestnut tiles are completely protected in `SpecialCandyHandler.ts`, `Match3Engine.ts`, and `GravityCascade.ts`. Striped lasers, wrapped bombs, color bombs, and fish will never destroy or nullify ingredients; ingredients only clear when collected at row 8.
-  - **Alternating Collection Feature (Max 5)**: Ingredients only appear on even levels (Level 2: 2 items, Level 4: 3 items, Level 6: 4 items, Level 8+: 5 items max). Odd levels (Level 1, 3, 5...) are pure match-and-score levels with zero ingredients spawning.
-  - **Score Progress Bar Calibration**: Level up target score is computed relative to the current team score (`totalScore + (level * 2000) + 1000`), ensuring that the new level starts with a fresh empty progress bar even after high-scoring cascades.
-  - **Multiplayer Responsiveness & Optimistic Swap**: Implemented instant client-side optimistic visual swapping in `main.ts` so the active player's screen immediately slides tiles under their fingers without waiting for network round-trip packets. Streamlined animation delays across `CanvasRenderer.ts` and `GameSession.ts` for snappy, simultaneous multiplayer pacing.
-  - **Public GitHub Releases**: Configured automated GitHub Release publishing (`v1.0.20`) for direct 1-click APK download without requiring a GitHub account.
-  - All 122 unit tests passing.
+- **Swedish Fish Candy, Falling Ingredients & Multiplayer Move Balancing**:
+  - Implemented 2x2 Swedish Fish Candy formation in `MatchDetector.ts` and `SpecialCandyHandler.ts`. Swedish Fish swim with an animated curved trajectory and bubble trail to target high-priority tiles or candies under falling ingredients.
+  - Implemented authentic Candy Crush Swedish Fish special combinations (Fish + Fish spawns 3 swimming fish, Fish + Striped creates a swimming striped rocket, Fish + Wrapped creates a swimming detonator, Fish + Color Bomb spawns 3 fish of the matching color).
+  - Implemented Falling Ingredients (Cherries and Chestnuts) spawning in refills on Level 2+, dropping via gravity, and collecting at the bottom row with collection counter tracking (`ingredientsCollected` / `ingredientsTarget`).
+  - Balanced multiplayer move count in `GameSession.ts` by counting every individual player move toward the shared move pool (`this.round++`), preventing multiple players from multiplying moves.
+  - Added Swedish Fish, Cherry, and Chestnut procedural vector sprites to `TextureSynthesizer.ts`, animated fish swimming in `CanvasRenderer.ts`, and updated HUD in `HUD.ts` and `index.html` with the ingredient goal indicator (`🍒 collected/target`).
+  - Built production bundle v1.0.15 and verified all 121 unit tests pass.
+
+- **Vertical Animation Smoothness, True Easing Math & Rematch/Ingredient Balancing**:
+  - **Fixed Compounding Lerp & Restored Silky Vertical Swapping**: Added `startX` and `startY` to `TileVisual` in `CanvasRenderer.ts` and updated `update(dt)` to use absolute start-to-target eased interpolation (`visual.y = visual.startY + (visual.targetY - visual.startY) * ease`) instead of compounding `(targetY - y) * ease`. Both candies in vertical swaps now slide smoothly past each other identically to horizontal swaps.
+  - **Smooth Pops & Cascading Drops**: In `MATCH_FOUND`, shatter particle explosion coordinates are computed from the real-time canvas pixel position of the matched candy (`visual.x + cellSize / 2`, `visual.y + cellSize / 2`), and gravity drops and spawns smoothly glide and bounce into position with the full duration rather than snapping in 2 frames.
+  - **Indestructible Ingredients & Rematch Clean Reset**: Cherries and chestnuts remain protected against special perks and combos, collection is active on even levels only (up to 5 max), level progression targets recalculate relative to current score, and match rematches reset to a clean 10 moves per player.
+  - **Rule Update**: Removed pre-execution approval rule from global settings as directed.
 
 ## Global Rules & Directives
 - **Rule 5 (Mandatory Real-Time Memory Updating)**:

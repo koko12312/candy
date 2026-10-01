@@ -75,15 +75,6 @@ export class SpecialCandyHandler {
 
     const addCoord = (r: number, c: number) => {
       if (r >= 0 && r < rows && c >= 0 && c < cols) {
-        const tile = board[r][c];
-        // Ingredients (cherries, chestnuts) are indestructible obstacles; never mark them for destruction!
-        if (
-          tile &&
-          (tile.type === CandyType.INGREDIENT_CHERRY ||
-            tile.type === CandyType.INGREDIENT_CHESTNUT)
-        ) {
-          return;
-        }
         affectedMap.set(`${r},${c}`, { row: r, col: c });
       }
     };
@@ -880,14 +871,6 @@ export class SpecialCandyHandler {
 
     const markCoord = (r: number, c: number) => {
       if (r >= 0 && r < rows && c >= 0 && c < cols) {
-        const t = board[r][c];
-        if (
-          t &&
-          (t.type === CandyType.INGREDIENT_CHERRY ||
-            t.type === CandyType.INGREDIENT_CHESTNUT)
-        ) {
-          return;
-        }
         affectedCoordsMap.set(`${r},${c}`, { row: r, col: c });
       }
     };
