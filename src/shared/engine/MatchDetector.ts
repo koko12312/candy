@@ -110,10 +110,6 @@ export class MatchDetector {
     const hRuns = this.findHorizontalRuns(board);
     const vRuns = this.findVerticalRuns(board);
 
-    if (hRuns.length === 0 && vRuns.length === 0) {
-      return [];
-    }
-
     const clusters: MatchCluster[] = [];
 
     // Track which runs have been consumed into clusters

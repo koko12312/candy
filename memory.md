@@ -26,10 +26,10 @@
   - Implemented Falling Ingredients (Cherries and Chestnuts) spawning in refills on Level 2+, dropping via gravity, and collecting at the bottom row with collection counter tracking (`ingredientsCollected` / `ingredientsTarget`).
   - Balanced multiplayer move count in `GameSession.ts` by counting every individual player move toward the shared move pool (`this.round++`), preventing multiple players from multiplying moves.
   - Added Swedish Fish, Cherry, and Chestnut procedural vector sprites to `TextureSynthesizer.ts`, animated fish swimming in `CanvasRenderer.ts`, and updated HUD in `HUD.ts` and `index.html` with the ingredient goal indicator (`🍒 collected/target`).
-  - Built production bundle v1.0.15 and verified all 121 unit tests pass.
-- **Permanent Keystore Persistence in CI/CD**:
-  - Configured GitHub Actions workflow (`.github/workflows/build-apk.yml`) with `contents: write` permissions. Run `36883827200` generated and committed `android/app/matchpop-debug.keystore` permanently to the repository (commit `eb362ab`).
-  - Pulled `matchpop-debug.keystore` locally. All future APK builds will use this exact committed keystore, ensuring all future updates install directly over existing versions without package conflicts.
+  - Built production bundle v1.0.16 and verified all unit tests pass including dedicated 2x2 square formation and Swedish Fish spawning tests.
+- **2x2 Swedish Fish Square Match Engine Fix**:
+  - Removed premature early return (`if (hRuns.length === 0 && vRuns.length === 0) return [];`) in `MatchDetector.detectMatches`.
+  - Previously, a $2 \times 2$ square without any 3-in-a-row straight line was prematurely returning empty matches, causing the move to be rejected as invalid. Now $2 \times 2$ squares are detected accurately and spawn Swedish Fish immediately.
 
 ## Global Rules & Directives
 - **Rule 5 (Mandatory Real-Time Memory Updating)**:
