@@ -198,6 +198,7 @@ export class Room {
     this.level = 1;
     this.targetScore = 2000;
     this.currentRound = 1;
+    this.settings.maxRounds = 10;
     for (const p of this.players) {
       p.isReady = p.isHost;
       p.score = 0;
