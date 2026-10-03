@@ -155,10 +155,17 @@ export class HUD {
       }
     }
     if (this.scoreTargetText) {
-      this.scoreTargetText.textContent = `${currentTotalScore.toLocaleString()} / ${targetScore.toLocaleString()}`;
+      // Clamp display score to targetScore visually if ingredients are pending
+      const displayScore = ingredientsTarget > 0 && ingredientsCollected < ingredientsTarget 
+        ? Math.min(currentTotalScore, targetScore) 
+        : currentTotalScore;
+      this.scoreTargetText.textContent = `${displayScore.toLocaleString()} / ${targetScore.toLocaleString()}`;
     }
     if (this.scoreProgressFill) {
-      const pct = Math.min(100, Math.max(0, (currentTotalScore / Math.max(1, targetScore)) * 100));
+      const displayScore = ingredientsTarget > 0 && ingredientsCollected < ingredientsTarget 
+        ? Math.min(currentTotalScore, targetScore) 
+        : currentTotalScore;
+      const pct = Math.min(100, Math.max(0, (displayScore / Math.max(1, targetScore)) * 100));
       this.scoreProgressFill.style.width = `${pct}%`;
     }
   }

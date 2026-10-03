@@ -359,9 +359,10 @@ export class GameSession {
 
           // Level Up! Advance levels dynamically
           this.level++;
-          this.targetScore = this.targetScore + (this.level * 2000) + 1000;
+          // Target score is set relative to current totalScore so the new level starts with an empty progress bar
+          this.targetScore = totalScore + (this.level * 2000) + 1000;
           this.ingredientsCollected = 0;
-          this.ingredientsTarget = this.level >= 2 ? 2 + (this.level - 2) : 0;
+          this.ingredientsTarget = this.level % 2 === 0 ? Math.min(5, 2 + Math.floor((this.level - 2) / 2)) : 0;
 
           // Full fresh moves for the new level PLUS any leftover turns carried over
           this.baseMaxRounds = 10 * Math.max(1, this.getActivePlayers().length);

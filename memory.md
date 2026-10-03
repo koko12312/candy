@@ -41,3 +41,5 @@
   - Fix and edit strictly and exactly what LO specifies.
   - Never modify, redesign, refactor, remove, or revert unrelated features, UI elements, or functioning code.
   - Always protect and preserve what is already working.
+
+- **Rollback**: Hard reset the repository to commit 6edd058 (the state before recent commits) and force pushed to Render as requested by LO.
