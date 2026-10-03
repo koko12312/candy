@@ -34,11 +34,15 @@
   - **Indestructible Ingredients & Rematch Clean Reset**: Cherries and chestnuts remain protected against special perks and combos, collection is active on even levels only (up to 5 max), level progression targets recalculate relative to current score, and match rematches reset to a clean 10 moves per player.
   - **Rule Update**: Removed pre-execution approval rule from global settings as directed.
 
-- **Score Unfreezing & Collectible Decoupling**:
-  - Removed artificial score freeze/cap on moves when collectibles are pending. Players now earn and accumulate full points on all moves without stopping at the target goal.
-  - Team goal bar and individual player pills at the bottom remain dynamically tied, showing actual earned scores and over-goal progress.
-  - Level progression still cleanly requires both conditions (target score reached AND all collectibles collected).
-  - All 122 unit tests passing.
+- **Indestructible Ingredients & Progression Score Capping Fixes**:
+  - **Indestructible Collectibles (Perks & Specials)**: `SpecialCandyHandler.ts` now strictly filters out `CandyType.INGREDIENT_CHERRY` and `CandyType.INGREDIENT_CHESTNUT` in `isSpecialCombo`, `addCoord`, and `markCoord`, and in all single and combo special detonation loops (`STRIPED_HORIZONTAL`, `STRIPED_VERTICAL`, `WRAPPED`, `COLOR_BOMB`, and `FISH`). Safeguarded `Match3Engine.ts` and `GravityCascade.ts` board nullification to never clear ingredient cells. Updated `CanvasRenderer.ts` so `cherry` and `chestnut` visual tiles are never shattered or removed during `SPECIAL_DETONATE` or `MATCH_FOUND`.
+  - **Progression Score Cap When Full**: In `GameSession.ts`, when `ingredientsTarget > 0` and `ingredientsCollected < ingredientsTarget`, moves cannot advance `totalScore` beyond `this.targetScore`. The score freezes at full and ceases accumulating extra points while waiting for remaining collectibles. When all collectibles are collected, the new level's target score is calculated from the capped score, preventing level skipping. In `HUD.ts`, `scoreTargetText` is clamped to `targetScore` while waiting on collectibles.
+  - Verified with all 122 unit tests passing.
+
+- **Player Score & Round Carryover Adjustments**:
+  - Uncoupled player score from team goal score in `GameSession.ts`: `currentP.score` accumulates full turn score (`resolution.turnScore`) continuously so individual player scores at the bottom never freeze when waiting for collectibles.
+  - Restored round carryover on level-up in `GameSession.ts`: `leftoverRounds` (`Math.max(0, currentMaxRounds - this.round)`) carries over and adds to `baseMaxRounds` upon level advancement, while rematches/lobby resets continue to cleanly reset to 10 moves per player.
+  - Verified with all 122 unit tests passing.
 
 ## Global Rules & Directives
 - **Rule 5 (Mandatory Real-Time Memory Updating)**:
@@ -47,3 +51,4 @@
   - Fix and edit strictly and exactly what LO specifies.
   - Never modify, redesign, refactor, remove, or revert unrelated features, UI elements, or functioning code.
   - Always protect and preserve what is already working.
+
