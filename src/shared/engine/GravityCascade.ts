@@ -270,6 +270,10 @@ export class GravityCascade {
 
       // Destroy matched/blasted tiles on the board
       for (const coord of coordsToDestroy.values()) {
+        const t = board[coord.row][coord.col];
+        if (t && (t.type === CandyType.INGREDIENT_CHERRY || t.type === CandyType.INGREDIENT_CHESTNUT)) {
+          continue;
+        }
         board[coord.row][coord.col] = null;
       }
 

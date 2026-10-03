@@ -270,6 +270,10 @@ export class Match3Engine {
 
       // Clear affected cells from board
       for (const coord of comboResult.affectedCoords) {
+        const t = workingBoard[coord.row][coord.col];
+        if (t && (t.type === CandyType.INGREDIENT_CHERRY || t.type === CandyType.INGREDIENT_CHESTNUT)) {
+          continue;
+        }
         workingBoard[coord.row][coord.col] = null;
       }
 
