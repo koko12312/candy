@@ -172,6 +172,7 @@ export interface RoomStateDTO {
   currentRound?: number;
   level?: number;
   targetScore?: number;
+  progressionScore?: number;
 }
 
 export interface RoomCreateRequest {
@@ -207,6 +208,7 @@ export interface GameStartPayload {
   round: number;
   level: number;
   targetScore: number;
+  progressionScore: number;
   turnExpiresAt: number;
   turnDurationMs: number;
   serverTimestamp?: number;
@@ -230,6 +232,7 @@ export interface MoveResultPayload {
   reason?: 'NOT_YOUR_TURN' | 'INVALID_SWAP' | 'GAME_NOT_ACTIVE' | 'EVALUATING';
   events: EngineEvent[];
   scoreAwarded: number;
+  progressionScore: number;
   playerTotalScore: number;
   boardAfterSettled: Tile[][];
   needsReshuffle: boolean;
@@ -263,6 +266,7 @@ export interface ReshufflePayload {
 export interface LevelUpPayload {
   newLevel: number;
   newTargetScore: number;
+  newProgressionScore: number;
   newBoard: Tile[][];
   events: EngineEvent[];
   round?: number;
@@ -292,6 +296,7 @@ export interface GameSyncStatePayload {
   round: number;
   level: number;
   targetScore: number;
+  progressionScore: number;
   turnExpiresAt: number;
   turnDurationMs: number;
   serverTimestamp: number;

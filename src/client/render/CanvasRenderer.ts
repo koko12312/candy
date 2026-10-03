@@ -386,7 +386,7 @@ export class CanvasRenderer {
             this.soundCallback?.('pop', ev.step);
             for (const m of ev.tiles) {
               const visual = this.boardTiles.get(m.id);
-              if (visual && visual.type !== 'ingredient_cherry' && visual.type !== 'ingredient_chestnut') {
+              if (visual) {
                 const cx = visual.x + this.cellSize / 2;
                 const cy = visual.y + this.cellSize / 2;
                 this.particles.spawnCandyShatter(cx, cy, visual.color, 14);
@@ -483,7 +483,7 @@ export class CanvasRenderer {
             const destroyedList = (ev as any).affectedTiles || (ev as any).clearedTiles || [];
             for (const t of destroyedList) {
               const visual = this.boardTiles.get(t.id);
-              if (visual && visual.type !== 'ingredient_cherry' && visual.type !== 'ingredient_chestnut') {
+              if (visual) {
                 const center = this.getCellCenterPixel(visual.row, visual.col);
                 this.particles.spawnCandyShatter(center.x, center.y, visual.color, 16);
                 visual.scale = 0;

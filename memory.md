@@ -43,3 +43,5 @@
   - Always protect and preserve what is already working.
 
 - **Rollback**: Hard reset the repository to commit 6edd058 (the state before recent commits) and force pushed to Render as requested by LO.
+
+- **Version 1.0.22 Re-Release**: Re-applied exact fixes for collectibles, progression pacing, and round carry over, strictly tagged as v1.0.22, and deployed.

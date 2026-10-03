@@ -47,6 +47,7 @@ export class MatchPopApp {
   private cascadeSettledCallbacks: (() => void)[] = [];
   
   private currentLevel = 1;
+  private currentProgressionScore = 0;
   private currentTargetScore = 2000;
   private currentRound = 1;
   private maxRounds = 10;
@@ -265,6 +266,7 @@ export class MatchPopApp {
       this.currentBoard = payload.board;
       this.activePlayerId = payload.activePlayerId;
       this.currentLevel = payload.level || 1;
+      this.currentProgressionScore = payload.progressionScore || 0;
       this.currentTargetScore = payload.targetScore || 2000;
       this.currentRound = payload.round || 1;
       if (payload.maxRounds !== undefined) {
@@ -282,7 +284,7 @@ export class MatchPopApp {
       this.hud.updatePlayers(this.currentPlayers);
       this.hud.updateLevel(
         this.currentLevel,
-        0,
+        this.currentProgressionScore,
         this.currentTargetScore,
         this.currentRound,
         this.maxRounds,
@@ -331,15 +333,18 @@ export class MatchPopApp {
       this.currentIngredientsTarget = payload.ingredientsTarget;
     }
 
+    if (payload.progressionScore !== undefined) {
+      this.currentProgressionScore = payload.progressionScore;
+    }
+
     if (payload.playerTotalScore !== undefined) {
       const p = this.currentPlayers.find((pl) => pl.playerId === payload.playerId);
       if (p) p.score = payload.playerTotalScore;
       this.hud.updatePlayers(this.currentPlayers);
       
-      const totalScore = this.currentPlayers.reduce((sum, p) => sum + p.score, 0);
       this.hud.updateLevel(
         this.currentLevel,
-        totalScore,
+        this.currentProgressionScore,
         this.currentTargetScore,
         this.currentRound,
         this.maxRounds,
@@ -384,10 +389,9 @@ export class MatchPopApp {
       payload.serverTimestamp
     );
 
-    const totalScore = this.currentPlayers.reduce((sum, p) => sum + p.score, 0);
     this.hud.updateLevel(
       this.currentLevel,
-      totalScore,
+      this.currentProgressionScore,
       this.currentTargetScore,
       this.currentRound,
       this.maxRounds,
@@ -423,6 +427,9 @@ export class MatchPopApp {
   private handleLevelUp(payload: import('../shared/types').LevelUpPayload): void {
     this.currentLevel = payload.newLevel;
     this.currentTargetScore = payload.newTargetScore;
+    if (payload.newProgressionScore !== undefined) {
+      this.currentProgressionScore = payload.newProgressionScore;
+    }
     if (payload.round !== undefined) {
       this.currentRound = payload.round;
     }
@@ -443,10 +450,9 @@ export class MatchPopApp {
     this.hud.showLevelUpOverlay(this.currentLevel);
     
     // Update HUD
-    const totalScore = this.currentPlayers.reduce((s, p) => s + p.score, 0);
     this.hud.updateLevel(
       this.currentLevel,
-      totalScore,
+      this.currentProgressionScore,
       this.currentTargetScore,
       this.currentRound,
       this.maxRounds,
@@ -470,6 +476,7 @@ export class MatchPopApp {
     this.activePlayerId = payload.activePlayerId;
     if (payload.level) this.currentLevel = payload.level;
     if (payload.targetScore) this.currentTargetScore = payload.targetScore;
+    if (payload.progressionScore !== undefined) this.currentProgressionScore = payload.progressionScore;
     if (payload.round) this.currentRound = payload.round;
     if (payload.settings?.maxRounds) this.maxRounds = payload.settings.maxRounds;
     if (payload.ingredientsCollected !== undefined) {
@@ -488,10 +495,9 @@ export class MatchPopApp {
       this.hud.show();
       this.hud.setRoomCode(payload.roomCode);
       this.hud.updatePlayers(payload.players);
-      const totalScore = this.currentPlayers.reduce((sum, p) => sum + p.score, 0);
       this.hud.updateLevel(
         this.currentLevel,
-        totalScore,
+        this.currentProgressionScore,
         this.currentTargetScore,
         this.currentRound,
         this.maxRounds,
