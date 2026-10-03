@@ -34,11 +34,10 @@
   - **Indestructible Ingredients & Rematch Clean Reset**: Cherries and chestnuts remain protected against special perks and combos, collection is active on even levels only (up to 5 max), level progression targets recalculate relative to current score, and match rematches reset to a clean 10 moves per player.
   - **Rule Update**: Removed pre-execution approval rule from global settings as directed.
 
-- **Round Carry Over & Unrestricted Score Progression**:
-  - Maintained round carry over on level up (`leftoverRounds = Math.max(0, currentMaxRounds - this.round)`) so all extra turns accumulate into the new level.
-  - Reset rounds to base 10 per player strictly on game over and on rematch in `resetToLobby()`.
-  - Removed artificial score freeze and capping: player scores at the bottom and team score at the top continuously accumulate and stay synchronized without pausing when collectibles are still pending.
-  - On level up, the new target score calculates dynamically from `totalScore + (this.level * 2000) + 1000`.
+- **Score Unfreezing & Collectible Decoupling**:
+  - Removed artificial score freeze/cap on moves when collectibles are pending. Players now earn and accumulate full points on all moves without stopping at the target goal.
+  - Team goal bar and individual player pills at the bottom remain dynamically tied, showing actual earned scores and over-goal progress.
+  - Level progression still cleanly requires both conditions (target score reached AND all collectibles collected).
   - All 122 unit tests passing.
 
 ## Global Rules & Directives

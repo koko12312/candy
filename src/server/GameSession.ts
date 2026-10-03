@@ -354,19 +354,15 @@ export class GameSession {
           (this.ingredientsTarget === 0 || this.ingredientsCollected >= this.ingredientsTarget);
 
         if (levelConditionsMet) {
-          // Carry over leftover rounds from previous level as bonus turns!
-          const currentMaxRounds = this.room.settings.maxRounds || this.baseMaxRounds;
-          const leftoverRounds = Math.max(0, currentMaxRounds - this.round);
-
-          // Level Up! Advance levels dynamically relative to current score
+          // Level Up! Advance levels dynamically
           this.level++;
-          this.targetScore = totalScore + (this.level * 2000) + 1000;
+          this.targetScore = this.targetScore + (this.level * 2000) + 1000;
           this.ingredientsCollected = 0;
           this.ingredientsTarget = this.level >= 2 ? 2 + (this.level - 2) : 0;
 
-          // Fresh 10 moves per player PLUS any leftover rounds carried over
+          // Clean fresh 10 moves per player for the new level (no carry over!)
           this.baseMaxRounds = 10 * Math.max(1, this.getActivePlayers().length);
-          this.room.settings.maxRounds = this.baseMaxRounds + leftoverRounds;
+          this.room.settings.maxRounds = this.baseMaxRounds;
           this.round = 1;
           this.room.level = this.level;
           this.room.targetScore = this.targetScore;
