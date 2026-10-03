@@ -31,6 +31,14 @@ export class SpecialCandyHandler {
    * Checks if a swap between tileA and tileB constitutes a direct special candy combination.
    */
   public static isSpecialCombo(tileA: Tile, tileB: Tile): boolean {
+    if (
+      tileA.type === CandyType.INGREDIENT_CHERRY ||
+      tileA.type === CandyType.INGREDIENT_CHESTNUT ||
+      tileB.type === CandyType.INGREDIENT_CHERRY ||
+      tileB.type === CandyType.INGREDIENT_CHESTNUT
+    ) {
+      return false;
+    }
     // Condition 1: Both are specials
     if (tileA.type !== CandyType.NORMAL && tileB.type !== CandyType.NORMAL) {
       return true;
@@ -75,9 +83,8 @@ export class SpecialCandyHandler {
 
     const addCoord = (r: number, c: number) => {
       if (r >= 0 && r < rows && c >= 0 && c < cols) {
-        const tile = board[r][c];
-        // Ingredients are indestructible
-        if (tile && (tile.type === CandyType.INGREDIENT_CHERRY || tile.type === CandyType.INGREDIENT_CHESTNUT)) {
+        const t = board[r][c];
+        if (t && (t.type === CandyType.INGREDIENT_CHERRY || t.type === CandyType.INGREDIENT_CHESTNUT)) {
           return;
         }
         affectedMap.set(`${r},${c}`, { row: r, col: c });
@@ -95,7 +102,7 @@ export class SpecialCandyHandler {
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           const tile = board[r][c];
-          if (tile) {
+          if (tile && tile.type !== CandyType.INGREDIENT_CHERRY && tile.type !== CandyType.INGREDIENT_CHESTNUT) {
             addCoord(r, c);
             allTiles.push({ id: tile.id, row: r, col: c });
             score += SCORE_COLOR_BOMB_TILE;
@@ -887,6 +894,7 @@ export class SpecialCandyHandler {
     while (queue.length > 0) {
       const tile = queue.shift()!;
       if (visitedTileIds.has(tile.id)) continue;
+      if (tile.type === CandyType.INGREDIENT_CHERRY || tile.type === CandyType.INGREDIENT_CHESTNUT) continue;
       visitedTileIds.add(tile.id);
       markCoord(tile.row, tile.col);
 
@@ -896,9 +904,9 @@ export class SpecialCandyHandler {
         score += SCORE_STRIPED_TILE;
         const rowTiles: { id: number; row: number; col: number }[] = [];
         for (let c = 0; c < cols; c++) {
-          markCoord(tile.row, c);
           const target = board[tile.row][c];
-          if (target) {
+          if (target && target.type !== CandyType.INGREDIENT_CHERRY && target.type !== CandyType.INGREDIENT_CHESTNUT) {
+            markCoord(tile.row, c);
             rowTiles.push({ id: target.id, row: target.row, col: target.col });
             if (!visitedTileIds.has(target.id)) {
               queue.push(target);
@@ -915,9 +923,9 @@ export class SpecialCandyHandler {
         score += SCORE_STRIPED_TILE;
         const colTiles: { id: number; row: number; col: number }[] = [];
         for (let r = 0; r < rows; r++) {
-          markCoord(r, tile.col);
           const target = board[r][tile.col];
-          if (target) {
+          if (target && target.type !== CandyType.INGREDIENT_CHERRY && target.type !== CandyType.INGREDIENT_CHESTNUT) {
+            markCoord(r, tile.col);
             colTiles.push({ id: target.id, row: target.row, col: target.col });
             if (!visitedTileIds.has(target.id)) {
               queue.push(target);
@@ -938,9 +946,9 @@ export class SpecialCandyHandler {
             const tr = tile.row + dr;
             const tc = tile.col + dc;
             if (tr >= 0 && tr < rows && tc >= 0 && tc < cols) {
-              markCoord(tr, tc);
               const target = board[tr][tc];
-              if (target) {
+              if (target && target.type !== CandyType.INGREDIENT_CHERRY && target.type !== CandyType.INGREDIENT_CHESTNUT) {
+                markCoord(tr, tc);
                 blastTiles1.push({ id: target.id, row: target.row, col: target.col });
                 if (!visitedTileIds.has(target.id)) {
                   queue.push(target);
@@ -971,7 +979,7 @@ export class SpecialCandyHandler {
         for (let r = 0; r < rows; r++) {
           for (let c = 0; c < cols; c++) {
             const cand = board[r][c];
-            if (cand && cand.color !== CandyColor.NONE && !visitedTileIds.has(cand.id)) {
+            if (cand && cand.color !== CandyColor.NONE && cand.type !== CandyType.INGREDIENT_CHERRY && cand.type !== CandyType.INGREDIENT_CHESTNUT && !visitedTileIds.has(cand.id)) {
               activeColors.add(cand.color);
             }
           }
@@ -985,7 +993,7 @@ export class SpecialCandyHandler {
         for (let r = 0; r < rows; r++) {
           for (let c = 0; c < cols; c++) {
             const cand = board[r][c];
-            if (cand && cand.color === chosenColor) {
+            if (cand && cand.color === chosenColor && cand.type !== CandyType.INGREDIENT_CHERRY && cand.type !== CandyType.INGREDIENT_CHESTNUT) {
               markCoord(r, c);
               colorBombAffected.push({ id: cand.id, row: cand.row, col: cand.col });
               if (!visitedTileIds.has(cand.id)) {
@@ -1006,24 +1014,26 @@ export class SpecialCandyHandler {
         const targets = this.findSmartTargets(board, 1, prng, visitedTileIds);
         if (targets.length > 0) {
           const bestTarget = targets[0];
-          markCoord(bestTarget.row, bestTarget.col);
-          if (!visitedTileIds.has(bestTarget.id)) {
-            queue.push(bestTarget);
+          if (bestTarget.type !== CandyType.INGREDIENT_CHERRY && bestTarget.type !== CandyType.INGREDIENT_CHESTNUT) {
+            markCoord(bestTarget.row, bestTarget.col);
+            if (!visitedTileIds.has(bestTarget.id)) {
+              queue.push(bestTarget);
+            }
+
+            events.push({
+              type: 'FISH_SWIM',
+              from: { row: tile.row, col: tile.col },
+              target: { row: bestTarget.row, col: bestTarget.col },
+              fishColor: tile.color
+            });
+
+            events.push({
+              type: 'SPECIAL_DETONATE',
+              specialType: CandyType.FISH,
+              origin: { row: bestTarget.row, col: bestTarget.col },
+              affectedTiles: [{ id: bestTarget.id, row: bestTarget.row, col: bestTarget.col }]
+            });
           }
-
-          events.push({
-            type: 'FISH_SWIM',
-            from: { row: tile.row, col: tile.col },
-            target: { row: bestTarget.row, col: bestTarget.col },
-            fishColor: tile.color
-          });
-
-          events.push({
-            type: 'SPECIAL_DETONATE',
-            specialType: CandyType.FISH,
-            origin: { row: bestTarget.row, col: bestTarget.col },
-            affectedTiles: [{ id: bestTarget.id, row: bestTarget.row, col: bestTarget.col }]
-          });
         }
       }
     }

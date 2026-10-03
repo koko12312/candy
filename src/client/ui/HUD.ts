@@ -155,7 +155,10 @@ export class HUD {
       }
     }
     if (this.scoreTargetText) {
-      this.scoreTargetText.textContent = `${currentTotalScore.toLocaleString()} / ${targetScore.toLocaleString()}`;
+      const displayScore = (ingredientsTarget > 0 && ingredientsCollected < ingredientsTarget && currentTotalScore > targetScore)
+        ? targetScore
+        : currentTotalScore;
+      this.scoreTargetText.textContent = `${displayScore.toLocaleString()} / ${targetScore.toLocaleString()}`;
     }
     if (this.scoreProgressFill) {
       const pct = Math.min(100, Math.max(0, (currentTotalScore / Math.max(1, targetScore)) * 100));

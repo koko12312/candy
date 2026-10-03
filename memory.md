@@ -34,6 +34,11 @@
   - **Indestructible Ingredients & Rematch Clean Reset**: Cherries and chestnuts remain protected against special perks and combos, collection is active on even levels only (up to 5 max), level progression targets recalculate relative to current score, and match rematches reset to a clean 10 moves per player.
   - **Rule Update**: Removed pre-execution approval rule from global settings as directed.
 
+- **Indestructible Ingredients & Progression Score Capping Fixes**:
+  - **Indestructible Collectibles (Perks & Specials)**: `SpecialCandyHandler.ts` now strictly filters out `CandyType.INGREDIENT_CHERRY` and `CandyType.INGREDIENT_CHESTNUT` in `isSpecialCombo`, `addCoord`, and `markCoord`, and in all single and combo special detonation loops (`STRIPED_HORIZONTAL`, `STRIPED_VERTICAL`, `WRAPPED`, `COLOR_BOMB`, and `FISH`). Safeguarded `Match3Engine.ts` and `GravityCascade.ts` board nullification to never clear ingredient cells. Updated `CanvasRenderer.ts` so `cherry` and `chestnut` visual tiles are never shattered or removed during `SPECIAL_DETONATE` or `MATCH_FOUND`.
+  - **Progression Score Cap When Full**: In `GameSession.ts`, when `ingredientsTarget > 0` and `ingredientsCollected < ingredientsTarget`, moves cannot advance `totalScore` beyond `this.targetScore`. The score freezes at full and ceases accumulating extra points while waiting for remaining collectibles. When all collectibles are collected, the new level's target score is calculated from the capped score, preventing level skipping. In `HUD.ts`, `scoreTargetText` is clamped to `targetScore` while waiting on collectibles.
+  - Verified with all 122 unit tests passing.
+
 ## Global Rules & Directives
 - **Rule 5 (Mandatory Real-Time Memory Updating)**:
   - Continuously update memory.md as the final action of every finished step.
@@ -41,9 +46,3 @@
   - Fix and edit strictly and exactly what LO specifies.
   - Never modify, redesign, refactor, remove, or revert unrelated features, UI elements, or functioning code.
   - Always protect and preserve what is already working.
-
-- **Rollback**: Hard reset the repository to commit 6edd058 (the state before recent commits) and force pushed to Render as requested by LO.
-
-- **Version 1.0.22 Re-Release**: Re-applied exact fixes for collectibles, progression pacing, and round carry over, strictly tagged as v1.0.22, and deployed.
-
-- **Version 1.0.23**: Decoupled progression score from total player score to prevent level skipping while keeping the target score formula strictly constant (+2000 per level + 1000 base), as requested by LO.

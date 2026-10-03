@@ -296,7 +296,14 @@ export class GameSession {
 
       // Valid move! Update board and score
       this.board = resolution.finalBoard;
-      currentP.score += resolution.turnScore;
+      const currentTotalScore = this.room.players.reduce((sum, p) => sum + p.score, 0);
+      let scoreAwarded = resolution.turnScore;
+      if (this.ingredientsTarget > 0 && this.ingredientsCollected < this.ingredientsTarget) {
+        if (currentTotalScore + scoreAwarded > this.targetScore) {
+          scoreAwarded = Math.max(0, this.targetScore - currentTotalScore);
+        }
+      }
+      currentP.score += scoreAwarded;
       currentP.consecutiveTimeouts = 0; // Reset consecutive timeouts on successful move
 
       // Check if board has 0 valid moves remaining -> trigger Reshuffle
@@ -319,7 +326,7 @@ export class GameSession {
         from,
         to,
         events: resolution.events,
-        scoreAwarded: resolution.turnScore,
+        scoreAwarded,
         playerTotalScore: currentP.score,
         boardAfterSettled: Match3Engine.cloneBoard(this.board),
         needsReshuffle,
