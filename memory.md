@@ -45,3 +45,5 @@
 - **Rollback**: Hard reset the repository to commit 6edd058 (the state before recent commits) and force pushed to Render as requested by LO.
 
 - **Version 1.0.22 Re-Release**: Re-applied exact fixes for collectibles, progression pacing, and round carry over, strictly tagged as v1.0.22, and deployed.
+
+- **Version 1.0.23**: Decoupled progression score from total player score to prevent level skipping while keeping the target score formula strictly constant (+2000 per level + 1000 base), as requested by LO.

@@ -39,7 +39,6 @@ export class GameSession {
   public currentTurnIndex = 0; // Index into active connected players list
   public round = 1;
   public level = 1;
-  public progressionScore = 0;
   public targetScore = 2000;
   public ingredientsCollected = 0;
   public ingredientsTarget = 0;
@@ -103,7 +102,6 @@ export class GameSession {
     this.startTurnCountdown();
 
     this.room.level = this.level;
-    this.room.progressionScore = this.progressionScore;
     this.room.targetScore = this.targetScore;
     this.room.currentRound = this.round;
 
@@ -113,7 +111,6 @@ export class GameSession {
       activePlayerId: this.activePlayerId,
       round: this.round,
       level: this.level,
-      progressionScore: this.progressionScore,
       targetScore: this.targetScore,
       turnExpiresAt: this.turnExpiresAt,
       turnDurationMs: this.turnDurationMs,
@@ -286,7 +283,6 @@ export class GameSession {
           reason: 'INVALID_SWAP',
           events: resolution.events,
           scoreAwarded: 0,
-          progressionScore: this.progressionScore,
           playerTotalScore: currentP.score,
           boardAfterSettled: Match3Engine.cloneBoard(this.board),
           needsReshuffle: false,
@@ -301,10 +297,6 @@ export class GameSession {
       // Valid move! Update board and score
       this.board = resolution.finalBoard;
       currentP.score += resolution.turnScore;
-      this.progressionScore += resolution.turnScore;
-      if (this.ingredientsTarget > 0 && this.ingredientsCollected < this.ingredientsTarget) {
-        this.progressionScore = Math.min(this.progressionScore, this.targetScore);
-      }
       currentP.consecutiveTimeouts = 0; // Reset consecutive timeouts on successful move
 
       // Check if board has 0 valid moves remaining -> trigger Reshuffle
@@ -328,7 +320,6 @@ export class GameSession {
         to,
         events: resolution.events,
         scoreAwarded: resolution.turnScore,
-        progressionScore: this.progressionScore,
         playerTotalScore: currentP.score,
         boardAfterSettled: Match3Engine.cloneBoard(this.board),
         needsReshuffle,
@@ -358,7 +349,7 @@ export class GameSession {
         const totalScore = this.room.players.reduce((sum, p) => sum + p.score, 0);
 
         const levelConditionsMet =
-          this.progressionScore >= this.targetScore &&
+          totalScore >= this.targetScore &&
           (this.ingredientsTarget === 0 || this.ingredientsCollected >= this.ingredientsTarget);
 
         if (levelConditionsMet) {
@@ -377,7 +368,6 @@ export class GameSession {
           this.room.settings.maxRounds = this.baseMaxRounds + leftoverRounds;
           this.round = 1;
           this.room.level = this.level;
-          this.room.progressionScore = this.progressionScore;
           this.room.targetScore = this.targetScore;
           this.room.currentRound = this.round;
           
@@ -396,7 +386,6 @@ export class GameSession {
           
           this.callbacks.onLevelUp?.({
             newLevel: this.level,
-            newProgressionScore: this.progressionScore,
             newTargetScore: this.targetScore,
             newBoard: Match3Engine.cloneBoard(this.board),
             events: levelUpEvents,
@@ -549,7 +538,7 @@ export class GameSession {
 
     const totalScore = this.room.players.reduce((sum, p) => sum + p.score, 0);
     const isVictory =
-      this.progressionScore >= this.targetScore &&
+      totalScore >= this.targetScore &&
       (this.ingredientsTarget === 0 || this.ingredientsCollected >= this.ingredientsTarget);
 
     this.callbacks.onGameOver({
@@ -571,7 +560,6 @@ export class GameSession {
       activePlayerId: this.activePlayerId,
       round: this.round,
       level: this.level,
-      progressionScore: this.progressionScore,
       targetScore: this.targetScore,
       turnExpiresAt: this.turnExpiresAt,
       turnDurationMs: this.turnDurationMs,

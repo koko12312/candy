@@ -46,7 +46,6 @@ export class Room {
   public players: RoomPlayer[] = [];
   public spectators: RoomSpectator[] = [];
   public level = 1;
-  public progressionScore = 0;
   public targetScore = 2000;
   public currentRound = 1;
 
@@ -197,10 +196,8 @@ export class Room {
   public resetToLobby(): void {
     this.status = 'LOBBY';
     this.level = 1;
-    this.progressionScore = 0;
     this.targetScore = 2000;
     this.currentRound = 1;
-    this.settings.maxRounds = 10;
     for (const p of this.players) {
       p.isReady = p.isHost;
       p.score = 0;
@@ -406,7 +403,6 @@ export class Room {
       spectatorCount: this.spectators.length,
       settings: { ...this.settings },
       level: this.level,
-      progressionScore: this.progressionScore,
       targetScore: this.targetScore,
       currentRound: this.currentRound
     };
