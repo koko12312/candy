@@ -5,7 +5,6 @@
   "bundledWebRuntime": false,
   "backgroundColor": "#18042c",
   "server": {
-    "url": "https://match-pop-multiplayer.onrender.com",
     "cleartext": true,
     "androidScheme": "https"
   },

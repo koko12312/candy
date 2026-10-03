@@ -106,6 +106,7 @@ jobs:
         with:
           tag_name: ${{ steps.get_version.outputs.version }}
           name: "Match Pop Multiplayer ${{ steps.get_version.outputs.version }}"
+          make_latest: true
           body: |
             ## Match Pop Multiplayer ${{ steps.get_version.outputs.version }}
             
