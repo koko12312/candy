@@ -296,13 +296,7 @@ export class GameSession {
 
       // Valid move! Update board and score
       this.board = resolution.finalBoard;
-      const currentTotalScore = this.room.players.reduce((sum, p) => sum + p.score, 0);
-      let scoreAwarded = resolution.turnScore;
-      if (this.ingredientsTarget > 0 && this.ingredientsCollected < this.ingredientsTarget) {
-        if (currentTotalScore + scoreAwarded > this.targetScore) {
-          scoreAwarded = Math.max(0, this.targetScore - currentTotalScore);
-        }
-      }
+      const scoreAwarded = resolution.turnScore;
       currentP.score += scoreAwarded;
       currentP.consecutiveTimeouts = 0; // Reset consecutive timeouts on successful move
 
@@ -360,15 +354,19 @@ export class GameSession {
           (this.ingredientsTarget === 0 || this.ingredientsCollected >= this.ingredientsTarget);
 
         if (levelConditionsMet) {
-          // Level Up! Advance levels dynamically
+          // Carry over leftover rounds from previous level as bonus turns!
+          const currentMaxRounds = this.room.settings.maxRounds || this.baseMaxRounds;
+          const leftoverRounds = Math.max(0, currentMaxRounds - this.round);
+
+          // Level Up! Advance levels dynamically relative to current score
           this.level++;
-          this.targetScore = this.targetScore + (this.level * 2000) + 1000;
+          this.targetScore = totalScore + (this.level * 2000) + 1000;
           this.ingredientsCollected = 0;
           this.ingredientsTarget = this.level >= 2 ? 2 + (this.level - 2) : 0;
 
-          // Clean fresh 10 moves per player for the new level (no carry over!)
+          // Fresh 10 moves per player PLUS any leftover rounds carried over
           this.baseMaxRounds = 10 * Math.max(1, this.getActivePlayers().length);
-          this.room.settings.maxRounds = this.baseMaxRounds;
+          this.room.settings.maxRounds = this.baseMaxRounds + leftoverRounds;
           this.round = 1;
           this.room.level = this.level;
           this.room.targetScore = this.targetScore;

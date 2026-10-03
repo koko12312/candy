@@ -34,14 +34,11 @@
   - **Indestructible Ingredients & Rematch Clean Reset**: Cherries and chestnuts remain protected against special perks and combos, collection is active on even levels only (up to 5 max), level progression targets recalculate relative to current score, and match rematches reset to a clean 10 moves per player.
   - **Rule Update**: Removed pre-execution approval rule from global settings as directed.
 
-- **Indestructible Ingredients & Progression Score Capping Fixes**:
-  - **Indestructible Collectibles (Perks & Specials)**: `SpecialCandyHandler.ts` now strictly filters out `CandyType.INGREDIENT_CHERRY` and `CandyType.INGREDIENT_CHESTNUT` in `isSpecialCombo`, `addCoord`, and `markCoord`, and in all single and combo special detonation loops (`STRIPED_HORIZONTAL`, `STRIPED_VERTICAL`, `WRAPPED`, `COLOR_BOMB`, and `FISH`). Safeguarded `Match3Engine.ts` and `GravityCascade.ts` board nullification to never clear ingredient cells. Updated `CanvasRenderer.ts` so `cherry` and `chestnut` visual tiles are never shattered or removed during `SPECIAL_DETONATE` or `MATCH_FOUND`.
-  - **Progression Score Cap When Full**: In `GameSession.ts`, when `ingredientsTarget > 0` and `ingredientsCollected < ingredientsTarget`, moves cannot advance `totalScore` beyond `this.targetScore`. The score freezes at full and ceases accumulating extra points while waiting for remaining collectibles. When all collectibles are collected, the new level's target score is calculated from the capped score, preventing level skipping. In `HUD.ts`, `scoreTargetText` is clamped to `targetScore` while waiting on collectibles.
-  - Verified with all 122 unit tests passing.
-
-- **Round Carryover Removal**:
-  - Eliminated `leftoverRounds` bonus addition in `GameSession.ts` on level up so moves/rounds never carry over across levels. Each level starts with exactly 10 moves per player.
-  - Reset `room.settings.maxRounds = 10` on game over (`GameSession.ts`) and on lobby reset (`Room.ts`) so rematches always begin with base 10 moves per player without accumulation.
+- **Round Carry Over & Unrestricted Score Progression**:
+  - Maintained round carry over on level up (`leftoverRounds = Math.max(0, currentMaxRounds - this.round)`) so all extra turns accumulate into the new level.
+  - Reset rounds to base 10 per player strictly on game over and on rematch in `resetToLobby()`.
+  - Removed artificial score freeze and capping: player scores at the bottom and team score at the top continuously accumulate and stay synchronized without pausing when collectibles are still pending.
+  - On level up, the new target score calculates dynamically from `totalScore + (this.level * 2000) + 1000`.
   - All 122 unit tests passing.
 
 ## Global Rules & Directives
@@ -51,4 +48,3 @@
   - Fix and edit strictly and exactly what LO specifies.
   - Never modify, redesign, refactor, remove, or revert unrelated features, UI elements, or functioning code.
   - Always protect and preserve what is already working.
-
